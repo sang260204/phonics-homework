@@ -115,44 +115,80 @@
       const [userAnswer, setUserAnswer] = useState('');
       const [feedback, setFeedback] = useState('');
 
+      // Blank Quiz State
+      const [blankInfo, setBlankInfo] = useState({ targetIndex: 2, options: [] });
+
       // Card Match Game States
       const [cards, setCards] = useState([]);
       const [flipped, setFlipped] = useState([]);
       const [matched, setMatched] = useState([]);
 
-      const audioRef = useRef(new Audio());
+      const audioCtxRef = useRef(null);
       const activeUnitObj = UNITS[currentUnit];
 
-      // 모바일 오디오 호환 100% MP3 스트리밍 로직
-      const playSound = (text) => {
+      // Web Audio API를 활용한 모바일 호환 100% 비프음/재생음
+      const playBeep = (freq = 440, type = 'sine', duration = 0.2) => {
         try {
-          const encodedText = encodeURIComponent(text);
-          // 구글 번역 고음질 원어민 오디오 스트림
-          const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=en&client=tw-ob`;
-          
-          if (audioRef.current) {
-            audioRef.current.pause();
-            audioRef.current.currentTime = 0;
-            audioRef.current.src = url;
-            
-            // 모바일 터치 이벤트 직후 즉시 재생
-            const playPromise = audioRef.current.play();
-            if (playPromise !== undefined) {
-              playPromise.catch(error => {
-                console.log("Audio play error, retrying fallback:", error);
-                // 모바일 브라우저 예외 보완
-                if ('speechSynthesis' in window) {
-                  window.speechSynthesis.cancel();
-                  const u = new SpeechSynthesisUtterance(text);
-                  u.lang = 'en-US';
-                  window.speechSynthesis.speak(u);
-                }
-              });
-            }
+          if (!audioCtxRef.current) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtxRef.current = new AudioContext();
           }
-        } catch (e) {
-          console.error(e);
+          if (audioCtxRef.current.state === 'suspended') {
+            audioCtxRef.current.resume();
+          }
+          const osc = audioCtxRef.current.createOscillator();
+          const gain = audioCtxRef.current.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, audioCtxRef.current.currentTime);
+          gain.gain.setValueAtTime(0.1, audioCtxRef.current.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtxRef.current.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(audioCtxRef.current.destination);
+          osc.start();
+          osc.stop(audioCtxRef.current.currentTime + duration);
+        } catch(e) {}
+      };
+
+      // 모바일 친화적 음성 출력 (SpeechSynthesis + WebAudio Fallback)
+      const playSound = (text) => {
+        // 음성 시작 소리 활성화
+        playBeep(523.25, 'sine', 0.15); // C5 도 음계
+
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = 'en-US';
+          utterance.rate = 0.85;
+
+          const voices = window.speechSynthesis.getVoices();
+          const enVoice = voices.find(v => v.lang.includes('en-US') || v.lang.includes('en'));
+          if (enVoice) utterance.voice = enVoice;
+
+          window.speechSynthesis.speak(utterance);
         }
+      };
+
+      // 빈칸 문제 생성기 (모음 및 기타 스펠링 랜덤 빈칸)
+      const setupBlankQuiz = (wordObj) => {
+        const w = wordObj.word;
+        // 빈칸으로 만들 위치 선택 (최소 2번째 글자 이상, 모음 우선)
+        let idx = 2;
+        const vowels = ['a', 'e', 'i', 'o', 'u'];
+        for (let i = 2; i < w.length; i++) {
+          if (vowels.includes(w[i])) {
+            idx = i;
+            break;
+          }
+        }
+        const targetChar = w[idx];
+
+        // 보기 4개 생성
+        let pool = ['a', 'e', 'i', 'o', 'u', 'k', 'g', 't', 'p', 's', 'l', 'r', 'n'];
+        pool = pool.filter(c => c !== targetChar);
+        pool.sort(() => Math.random() - 0.5);
+        const options = [targetChar, ...pool.slice(0, 3)].sort(() => Math.random() - 0.5);
+
+        setBlankInfo({ targetIndex: idx, options: options });
       };
 
       // 카드 게임 초기화
@@ -170,16 +206,29 @@
       };
 
       useEffect(() => {
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.getVoices();
+        }
+      }, []);
+
+      useEffect(() => {
         if (activeUnitObj) {
           setSelectedWord(activeUnitObj.words[0]);
           setQuizIndex(0);
           setFeedback('');
           setUserAnswer('');
+          setupBlankQuiz(activeUnitObj.words[0]);
           if (currentMode === 'match') {
             initMatchGame();
           }
         }
       }, [currentUnit, currentMode]);
+
+      useEffect(() => {
+        if (activeUnitObj && activeUnitObj.words[quizIndex]) {
+          setupBlankQuiz(activeUnitObj.words[quizIndex]);
+        }
+      }, [quizIndex]);
 
       const sendResultToGoogleSheet = (unitTitle, modeTitle, addScore) => {
         if (!GOOGLE_SCRIPT_URL) return;
@@ -203,6 +252,8 @@
       const addScorePoints = (points, modeName) => {
         const newScore = score + points;
         setScore(newScore);
+        playBeep(659.25, 'triangle', 0.2); // 미
+        setTimeout(() => playBeep(880, 'triangle', 0.3), 100); // 라 (성공 소리)
         confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
         sendResultToGoogleSheet(activeUnitObj.title, modeName, points);
       };
@@ -236,6 +287,7 @@
               setFeedback('🎉 모든 짝을 맞췄습니다!');
             }
           } else {
+            playBeep(220, 'sawtooth', 0.2);
             setTimeout(() => setFlipped([]), 1000);
           }
         }
@@ -395,6 +447,7 @@
                           addScorePoints(10, '조합 게임');
                           setTimeout(handleNextQuiz, 1200);
                         } else {
+                          playBeep(200, 'sawtooth', 0.2);
                           setFeedback('❌ 다시 시도해보세요!');
                         }
                       }}
@@ -471,6 +524,7 @@
                       addScorePoints(10, '스펠링 게임');
                       setTimeout(handleNextQuiz, 1200);
                     } else {
+                      playBeep(200, 'sawtooth', 0.2);
                       setFeedback('❌ 다시 작성해보세요!');
                     }
                   }}
@@ -482,30 +536,40 @@
               </div>
             )}
 
-            {/* 5. 빈칸 채우기 */}
+            {/* 5. 빈칸 채우기 (다양한 스펠링/모음 지원) */}
             {currentMode === 'blank' && (
               <div className="text-center space-y-4">
-                <span className="text-xs font-bold text-pink-500">빈칸에 들어갈 영어 글자를 맞혀보세요!</span>
+                <span className="text-xs font-bold text-pink-500">빈칸에 들어갈 올바른 스펠링을 맞혀보세요! ({quizIndex + 1}/{activeUnitObj.words.length})</span>
                 <div className="text-6xl">{currentQuizWord.icon}</div>
-                <div className="text-3xl font-black text-gray-800">
-                  {currentQuizWord.word.slice(0, 1)} <span className="text-pink-500 underline">_</span> {currentQuizWord.word.slice(2)}
+                <div className="text-3xl font-black text-gray-800 tracking-wider">
+                  {currentQuizWord.word.split('').map((char, index) => (
+                    <span key={index}>
+                      {index === blankInfo.targetIndex ? (
+                        <span className="text-pink-500 underline mx-1">_</span>
+                      ) : (
+                        char
+                      )}
+                    </span>
+                  ))}
                 </div>
                 <p className="text-sm font-bold text-gray-500">뜻: "{currentQuizWord.meaning}"</p>
-                <div className="flex gap-2 justify-center">
-                  {[currentQuizWord.word[1], 'a', 'e', 'i', 'o', 'u'].filter((v, i, a) => a.indexOf(v) === i).slice(0, 4).sort().map((char) => (
+                <div className="flex gap-3 justify-center pt-2">
+                  {blankInfo.options.map((char, idx) => (
                     <button
-                      key={char}
+                      key={idx}
                       onClick={() => {
-                        if (char === currentQuizWord.word[1]) {
-                          setFeedback('⭕ 정답!');
+                        const correctChar = currentQuizWord.word[blankInfo.targetIndex];
+                        if (char === correctChar) {
+                          setFeedback('⭕ 정답입니다!');
                           playSound(currentQuizWord.word);
                           addScorePoints(10, '빈칸 게임');
                           setTimeout(handleNextQuiz, 1200);
                         } else {
-                          setFeedback('❌ 틀렸습니다');
+                          playBeep(200, 'sawtooth', 0.2);
+                          setFeedback('❌ 다시 시도해보세요');
                         }
                       }}
-                      className="bg-amber-100 border-2 border-amber-300 text-amber-800 text-2xl font-black w-14 h-14 rounded-2xl shadow hover:bg-amber-200"
+                      className="bg-amber-100 border-2 border-amber-300 text-amber-800 text-2xl font-black w-14 h-14 rounded-2xl shadow hover:bg-amber-200 active:scale-95 transition"
                     >
                       {char}
                     </button>
