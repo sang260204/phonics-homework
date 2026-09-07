@@ -35,6 +35,7 @@
         id: 'u1',
         title: 'Unit 1: L-Blends',
         icon: '🐱',
+        sounds: ['bl', 'cl', 'fl', 'gl', 'pl', 'sl'],
         words: [
           { word: 'black', meaning: '검정색', icon: '⬛', sound: 'bl' },
           { word: 'block', meaning: '블록', icon: '🧱', sound: 'bl' },
@@ -51,6 +52,7 @@
         id: 'u2',
         title: 'Unit 2: R-Blends',
         icon: '🐸',
+        sounds: ['br', 'fr', 'gr', 'tr', 'dr', 'cr'],
         words: [
           { word: 'bread', meaning: '빵', icon: '🍞', sound: 'br' },
           { word: 'brown', meaning: '갈색', icon: '🟫', sound: 'br' },
@@ -67,6 +69,7 @@
         id: 'u3',
         title: 'Unit 3: S-Blends',
         icon: '🐊',
+        sounds: ['st', 'sn', 'sp', 'sm', 'sw', 'sk'],
         words: [
           { word: 'star', meaning: '별', icon: '⭐', sound: 'st' },
           { word: 'stop', meaning: '정지', icon: '🛑', sound: 'st' },
@@ -83,6 +86,7 @@
         id: 'u4',
         title: 'Unit 4: Digraphs',
         icon: '🦈',
+        sounds: ['sh', 'ck', 'ng', 'ch', 'th'],
         words: [
           { word: 'ship', meaning: '배', icon: '🚢', sound: 'sh' },
           { word: 'fish', meaning: '물고기', icon: '🐟', sound: 'sh' },
@@ -104,13 +108,27 @@
       const [currentUnit, setCurrentUnit] = useState(0);
       const [currentMode, setCurrentMode] = useState('listen');
       const [score, setScore] = useState(0);
+
+      // Quiz States
       const [selectedWord, setSelectedWord] = useState(null);
+      const [quizIndex, setQuizIndex] = useState(0);
+      const [userAnswer, setUserAnswer] = useState('');
+      const [feedback, setFeedback] = useState('');
+      const [matchedCards, setMatchedCards] = useState([]);
+      const [selectedCard, setSelectedCard] = useState(null);
+
+      const activeUnitObj = UNITS[currentUnit];
 
       useEffect(() => {
-        if (UNITS[currentUnit]) {
-          setSelectedWord(UNITS[currentUnit].words[0]);
+        if (activeUnitObj) {
+          setSelectedWord(activeUnitObj.words[0]);
+          setQuizIndex(0);
+          setFeedback('');
+          setUserAnswer('');
+          setMatchedCards([]);
+          setSelectedCard(null);
         }
-      }, [currentUnit]);
+      }, [currentUnit, currentMode]);
 
       const playTTS = (text) => {
         window.speechSynthesis.cancel();
@@ -139,29 +157,31 @@
         }).catch(err => console.error(err));
       };
 
-      const handleRegister = (e) => {
-        e.preventDefault();
-        if (!studentName.trim()) {
-          alert('이름을 입력해주세요!');
-          return;
-        }
-        setIsRegistered(true);
-      };
-
       const addScorePoints = (points, modeName) => {
         const newScore = score + points;
         setScore(newScore);
         confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
-        sendResultToGoogleSheet(UNITS[currentUnit].title, modeName, points);
+        sendResultToGoogleSheet(activeUnitObj.title, modeName, points);
       };
+
+      const handleNextQuiz = () => {
+        setFeedback('');
+        setUserAnswer('');
+        if (quizIndex + 1 < activeUnitObj.words.length) {
+          setQuizIndex(quizIndex + 1);
+        } else {
+          setQuizIndex(0);
+        }
+      };
+
+      const currentQuizWord = activeUnitObj.words[quizIndex];
 
       if (!isRegistered) {
         return (
           <div className="max-w-md mx-auto mt-12 p-6 bg-white rounded-3xl shadow-xl border-4 border-pink-200 text-center">
             <h1 className="text-3xl font-black text-pink-500 mb-2">🎈 파닉스 플레이랜드</h1>
             <p className="text-gray-500 text-sm mb-6">학습을 시작할 학생 정보를 입력해주세요!</p>
-            
-            <form onSubmit={handleRegister} className="space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); if(studentName.trim()) setIsRegistered(true); }} className="space-y-4">
               <div className="text-left">
                 <label className="block text-sm font-bold text-gray-700 mb-1">어린이 이름</label>
                 <input
@@ -172,7 +192,6 @@
                   className="w-full px-4 py-3 border-2 border-pink-200 rounded-2xl focus:outline-none focus:border-pink-400 text-lg font-bold"
                 />
               </div>
-
               <div className="text-left">
                 <label className="block text-sm font-bold text-gray-700 mb-1">학년 선택</label>
                 <select
@@ -186,19 +205,13 @@
                   <option value="유치부">🧸 유치부</option>
                 </select>
               </div>
-
-              <button
-                type="submit"
-                className="w-full bg-pink-500 hover:bg-pink-600 text-white font-black py-4 rounded-2xl shadow-lg text-xl transition transform active:scale-95"
-              >
+              <button type="submit" className="w-full bg-pink-500 hover:bg-pink-600 text-white font-black py-4 rounded-2xl shadow-lg text-xl transition transform active:scale-95">
                 학습 시작하기 🚀
               </button>
             </form>
           </div>
         );
       }
-
-      const activeUnitObj = UNITS[currentUnit];
 
       return (
         <div className="max-w-md mx-auto p-4 space-y-4">
@@ -214,10 +227,7 @@
               <div className="bg-amber-100 border border-amber-300 text-amber-700 font-black px-3 py-1 rounded-full text-sm flex items-center gap-1">
                 ⭐ {score}점
               </div>
-              <button
-                onClick={() => setIsRegistered(false)}
-                className="bg-gray-100 text-gray-600 px-2.5 py-1 rounded-lg text-xs font-bold hover:bg-gray-200"
-              >
+              <button onClick={() => setIsRegistered(false)} className="bg-gray-100 text-gray-600 px-2.5 py-1 rounded-lg text-xs font-bold">
                 👤 변경
               </button>
             </div>
@@ -227,11 +237,9 @@
             {UNITS.map((u, idx) => (
               <button
                 key={u.id}
-                onClick={() => { setCurrentUnit(idx); setCurrentMode('listen'); }}
+                onClick={() => setCurrentUnit(idx)}
                 className={`p-2 rounded-2xl border-b-4 font-black transition flex flex-col items-center justify-center ${
-                  currentUnit === idx
-                    ? 'bg-pink-500 text-white border-pink-700 shadow-lg scale-105'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-pink-50'
+                  currentUnit === idx ? 'bg-pink-500 text-white border-pink-700 shadow-lg scale-105' : 'bg-white text-gray-600 border-gray-200 hover:bg-pink-50'
                 }`}
               >
                 <span className="text-xl mb-1">{u.icon}</span>
@@ -252,9 +260,7 @@
                 key={m.id}
                 onClick={() => setCurrentMode(m.id)}
                 className={`py-2 rounded-xl transition flex flex-col items-center justify-center ${
-                  currentMode === m.id
-                    ? 'bg-pink-400 text-white shadow-md'
-                    : 'text-gray-500 hover:bg-pink-50'
+                  currentMode === m.id ? 'bg-pink-400 text-white shadow-md' : 'text-gray-500 hover:bg-pink-50'
                 }`}
               >
                 <span className="text-base">{m.icon}</span>
@@ -264,24 +270,20 @@
           </div>
 
           <div className="bg-white rounded-3xl p-5 shadow-lg border-4 border-pink-200 min-h-[380px] flex flex-col justify-between">
+            {/* 1. 듣기 모드 */}
             {currentMode === 'listen' && (
               <div>
-                <p className="text-xs font-bold text-pink-500 text-center mb-3">
-                  {activeUnitObj.title} • 그림 카드를 눌러보세요
-                </p>
+                <p className="text-xs font-bold text-pink-500 text-center mb-3">{activeUnitObj.title} • 그림 카드를 누르면 소리가 나요</p>
                 {selectedWord && (
                   <div className="bg-amber-50 rounded-2xl p-4 border-2 border-amber-200 text-center mb-4">
                     <div className="text-5xl mb-2">{selectedWord.icon}</div>
                     <div className="text-3xl font-black text-gray-800 tracking-wide mb-1">
-                      <span className="text-pink-500">{selectedWord.word.slice(0, 2)}</span>
-                      {selectedWord.word.slice(2)}
+                      <span className="text-pink-500">{selectedWord.sound}</span>
+                      {selectedWord.word.slice(selectedWord.sound.length)}
                     </div>
                     <p className="text-sm font-bold text-gray-500 mb-2">"{selectedWord.meaning}"</p>
-                    <button
-                      onClick={() => playTTS(selectedWord.word)}
-                      className="bg-pink-400 hover:bg-pink-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow"
-                    >
-                      🔊 소리 듣기
+                    <button onClick={() => playTTS(selectedWord.word)} className="bg-pink-400 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow">
+                      🔊 크게 듣기
                     </button>
                   </div>
                 )}
@@ -290,11 +292,7 @@
                     <button
                       key={idx}
                       onClick={() => { setSelectedWord(w); playTTS(w.word); }}
-                      className={`p-2 rounded-xl border-2 text-center transition ${
-                        selectedWord?.word === w.word
-                          ? 'border-amber-400 bg-amber-100 shadow-md'
-                          : 'border-gray-100 bg-gray-50 hover:bg-pink-50'
-                      }`}
+                      className={`p-2 rounded-xl border-2 text-center transition ${selectedWord?.word === w.word ? 'border-amber-400 bg-amber-100 shadow-md' : 'border-gray-100 bg-gray-50 hover:bg-pink-50'}`}
                     >
                       <div className="text-2xl mb-1">{w.icon}</div>
                       <div className="text-xs font-black text-gray-700">{w.word}</div>
@@ -304,24 +302,127 @@
               </div>
             )}
 
-            {currentMode !== 'listen' && (
-              <div className="text-center py-8 space-y-4">
-                <div className="text-5xl">🎮</div>
-                <h3 className="text-xl font-black text-pink-600">
-                  {currentMode === 'blend' && '소리 조합 게임'}
-                  {currentMode === 'match' && '카드 짝맞추기 게임'}
-                  {currentMode === 'spell' && '스펠링 맞추기'}
-                  {currentMode === 'blank' && '빈칸 채우기'}
-                </h3>
-                <p className="text-sm font-bold text-gray-500">
-                  {activeUnitObj.title} 파닉스 학습 게임을 플레이하세요!
-                </p>
-                <button
-                  onClick={() => addScorePoints(10, `${currentMode} 게임`)}
-                  className="bg-emerald-400 hover:bg-emerald-500 text-white font-black px-6 py-3 rounded-2xl shadow-lg transition text-lg transform active:scale-95"
-                >
-                  게임을 완수하고 +10점 받기 🏆
+            {/* 2. 소리 조합 게임 */}
+            {currentMode === 'blend' && (
+              <div className="text-center space-y-4">
+                <span className="text-xs font-bold text-pink-500">알맞은 첫 소리(Blend)를 선택하세요! ({quizIndex + 1}/{activeUnitObj.words.length})</span>
+                <div className="text-6xl">{currentQuizWord.icon}</div>
+                <div className="text-3xl font-black text-gray-700">
+                  <span className="text-pink-400 underline">? ?</span>{currentQuizWord.word.slice(currentQuizWord.sound.length)}
+                </div>
+                <p className="text-sm text-gray-500 font-bold">"{currentQuizWord.meaning}"</p>
+                <div className="grid grid-cols-3 gap-2 pt-2">
+                  {activeUnitObj.sounds.map((snd) => (
+                    <button
+                      key={snd}
+                      onClick={() => {
+                        if (snd === currentQuizWord.sound) {
+                          setFeedback('⭕ 정답입니다!');
+                          playTTS(currentQuizWord.word);
+                          addScorePoints(10, '조합 게임');
+                          setTimeout(handleNextQuiz, 1200);
+                        } else {
+                          setFeedback('❌ 다시 시도해보세요!');
+                        }
+                      }}
+                      className="bg-pink-100 hover:bg-pink-200 text-pink-700 text-xl font-black py-3 rounded-xl border-2 border-pink-300"
+                    >
+                      {snd}
+                    </button>
+                  ))}
+                </div>
+                {feedback && <div className={`text-lg font-black ${feedback.includes('⭕') ? 'text-green-500' : 'text-red-500'}`}>{feedback}</div>}
+              </div>
+            )}
+
+            {/* 3. 짝맞추기 게임 */}
+            {currentMode === 'match' && (
+              <div className="text-center space-y-3">
+                <span className="text-xs font-bold text-pink-500">단어에 맞는 그림을 짝지어주세요!</span>
+                <div className="grid grid-cols-3 gap-2 pt-2">
+                  {activeUnitObj.words.slice(0, 6).map((item, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        playTTS(item.word);
+                        addScorePoints(5, '짝맞추기 게임');
+                      }}
+                      className="p-3 bg-pink-50 border-2 border-pink-200 rounded-2xl flex flex-col items-center hover:bg-pink-100 active:scale-95 transition"
+                    >
+                      <span className="text-3xl">{item.icon}</span>
+                      <span className="text-xs font-black text-gray-700 mt-1">{item.word}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 font-bold">카드를 누르면 소리와 함께 +5점이 누적됩니다!</p>
+              </div>
+            )}
+
+            {/* 4. 스펠링 맞추기 */}
+            {currentMode === 'spell' && (
+              <div className="text-center space-y-4">
+                <span className="text-xs font-bold text-pink-500">단어를 듣고 올바른 스펠링을 입력하세요!</span>
+                <div className="text-6xl">{currentQuizWord.icon}</div>
+                <button onClick={() => playTTS(currentQuizWord.word)} className="bg-amber-400 text-white font-black px-4 py-1.5 rounded-full text-xs shadow">
+                  🔊 소리 다시 듣기
                 </button>
+                <div>
+                  <input
+                    type="text"
+                    value={userAnswer}
+                    onChange={(e) => setUserAnswer(e.target.value.toLowerCase())}
+                    placeholder="영어 단어 입력..."
+                    className="w-full text-center text-2xl font-black p-3 border-2 border-pink-300 rounded-2xl focus:outline-none"
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    if (userAnswer.trim() === currentQuizWord.word) {
+                      setFeedback('🎉 정답입니다!');
+                      addScorePoints(10, '스펠링 게임');
+                      setTimeout(handleNextQuiz, 1200);
+                    } else {
+                      setFeedback('❌ 다시 작성해보세요!');
+                    }
+                  }}
+                  className="w-full bg-pink-500 text-white font-black py-3 rounded-2xl shadow"
+                >
+                  정답 확인하기
+                </button>
+                {feedback && <div className={`text-lg font-black ${feedback.includes('🎉') ? 'text-green-500' : 'text-red-500'}`}>{feedback}</div>}
+              </div>
+            )}
+
+            {/* 5. 빈칸 채우기 */}
+            {currentMode === 'blank' && (
+              <div className="text-center space-y-4">
+                <span className="text-xs font-bold text-pink-500">빈칸에 들어갈 영어 글자를 맞혀보세요!</span>
+                <div className="text-6xl">{currentQuizWord.icon}</div>
+                <div className="text-3xl font-black text-gray-800">
+                  {currentQuizWord.word.slice(0, 1)} <span className="text-pink-500 underline">_</span> {currentQuizWord.word.slice(2)}
+                </div>
+                <p className="text-sm font-bold text-gray-500">뜻: "{currentQuizWord.meaning}"</p>
+                <div className="flex gap-2 justify-center">
+                  {[currentQuizWord.word[1], 'a', 'e', 'i', 'o', 'u'].filter((v, i, a) => a.indexOf(v) === i).slice(0, 4).sort().map((char) => (
+                    <button
+                      key={char}
+                      onClick={() => {
+                        if (char === currentQuizWord.word[1]) {
+                          setFeedback('⭕ 정답!');
+                          playTTS(currentQuizWord.word);
+                          addScorePoints(10, '빈칸 게임');
+                          setTimeout(handleNextQuiz, 1200);
+                        } else {
+                          setFeedback('❌ 틀렸습니다');
+                        }
+                      }}
+                      className="bg-amber-100 border-2 border-amber-300 text-amber-800 text-2xl font-black w-14 h-14 rounded-2xl shadow hover:bg-amber-200"
+                    >
+                      {char}
+                    </button>
+                  ))}
+                </div>
+                {feedback && <div className={`text-lg font-black ${feedback.includes('⭕') ? 'text-green-500' : 'text-red-500'}`}>{feedback}</div>}
               </div>
             )}
           </div>
