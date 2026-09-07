@@ -27,36 +27,38 @@
     .mode-btn.active { background: white; color: #e91e63; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 
     /* 디스플레이 영역 */
-    .title-banner { text-align: center; color: #e91e63; font-size: 16px; margin-bottom: 10px; }
+    .title-banner { text-align: center; color: #e91e63; font-size: 15px; margin-bottom: 10px; font-weight: bold; }
     .main-display { background: #fffde7; border: 3px solid #fff59d; border-radius: 20px; padding: 15px; text-align: center; margin-bottom: 15px; min-height: 180px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
     .display-emoji { font-size: 65px; margin-bottom: 5px; }
     .display-word { font-size: 32px; color: #d81b60; margin-bottom: 5px; letter-spacing: 2px; }
     .display-meaning { font-size: 18px; color: #666; }
 
-    /* 카드 그리드 및 기타 요소 */
+    /* 듣기 모드 카드 그리드 */
     .card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
     .card-item { background: #fafafa; border: 2px solid #eee; border-radius: 15px; padding: 10px 5px; text-align: center; cursor: pointer; }
     .card-item.selected { border-color: #ff4081; background: #fff0f5; }
     .card-emoji { font-size: 28px; }
     .card-word { font-size: 14px; color: #333; margin-top: 3px; }
 
+    /* 조합 모드 리스트 */
     .blend-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 2px; }
-    .blend-btn { padding: 12px 5px; background: #f3e5f5; border: 2px solid #ce93d8; border-radius: 12px; font-size: 16px; color: #4a148c; cursor: pointer; text-align: center; }
-    
-    .options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; margin-top: 10px; }
-    .opt-btn { padding: 12px; background: #e8eaf6; border: 2px solid #c5cae9; border-radius: 12px; font-size: 18px; color: #1a237e; cursor: pointer; }
+    .blend-btn { padding: 10px 5px; background: #f3e5f5; border: 2px solid #ce93d8; border-radius: 12px; font-size: 15px; color: #4a148c; cursor: pointer; text-align: center; font-family: 'Jua', sans-serif; }
 
-    .speaker-btn { background: #ff4081; color: white; border: none; border-radius: 20px; padding: 8px 15px; font-size: 14px; cursor: pointer; margin-top: 8px; display: inline-flex; align-items: center; gap: 5px; }
-    
-    /* 짝맞추기 게임용 스타일 */
+    /* 짝맞추기 그리드 */
     .match-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .match-card { background: #e3f2fd; border: 2px solid #90caf9; border-radius: 12px; padding: 15px 5px; text-align: center; font-size: 18px; cursor: pointer; min-height: 60px; display: flex; align-items: center; justify-content: center; }
-    .match-card.matched { background: #c8e6c9; border-color: #81c784; opacity: 0.6; cursor: default; }
+    .match-card { background: #e3f2fd; border: 2px solid #90caf9; border-radius: 12px; padding: 12px 5px; text-align: center; font-size: 16px; cursor: pointer; min-height: 55px; display: flex; align-items: center; justify-content: center; color: #0d47a1; }
+    .match-card.matched { background: #c8e6c9; border-color: #81c784; opacity: 0.5; cursor: default; color: #2e7d32; }
     .match-card.selected { border-color: #ff4081; background: #fff0f5; }
 
-    /* 스펠링 게임용 스타일 */
+    /* 스펠링 입력 */
     .spell-input { width: 100%; padding: 12px; border: 2px solid #ff80ab; border-radius: 12px; font-size: 20px; text-align: center; margin-bottom: 10px; outline: none; }
-    .spell-submit { width: 100%; padding: 12px; background: #ff4081; color: white; border: none; border-radius: 12px; font-size: 18px; cursor: pointer; }
+    .spell-submit { width: 100%; padding: 12px; background: #ff4081; color: white; border: none; border-radius: 12px; font-size: 18px; cursor: pointer; font-family: 'Jua', sans-serif; }
+
+    /* 빈칸 옵션 버튼 */
+    .options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; margin-top: 5px; }
+    .opt-btn { padding: 12px; background: #e8eaf6; border: 2px solid #c5cae9; border-radius: 12px; font-size: 18px; color: #1a237e; cursor: pointer; font-family: 'Jua', sans-serif; }
+
+    .speaker-btn { background: #ff4081; color: white; border: none; border-radius: 20px; padding: 8px 15px; font-size: 14px; cursor: pointer; margin-top: 8px; display: inline-flex; align-items: center; gap: 5px; font-family: 'Jua', sans-serif; }
   </style>
 </head>
 <body>
@@ -104,7 +106,7 @@
 </div>
 
 <script>
-// 제공해주신 구글 앱스 스크립트 웹앱 URL 연동 완료
+// 구글 앱스 스크립트 웹앱 URL 연동
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4LDDETD6E2gS8jxFHecFslZL2EQ6bco4rvxdPUPhasPhdtA_dSBpaUG6my5BZZpMM/exec";
 
 let studentName = "";
@@ -113,7 +115,7 @@ let currentUnit = "u4";
 let currentMode = "listen";
 let selectedWordIndex = 0;
 
-// 짝맞추기/스펠링 전용 상태 변수
+// 짝맞추기 전용 변수
 let matchSelected = null;
 let matchedCount = 0;
 
@@ -125,17 +127,19 @@ const phonicsMap = {
   "sh": "쉬", "ck": "크", "ng": "응", "ch": "치", "th": "쓰"
 };
 
-// 단어 데이터 (요청하신 대로 blade, plug, tree 제외)
+// 원본 전체 단어 데이터 세트
 const unitsData = {
   u1: {
     title: "Unit 1: L-Blends",
     words: [
+      { word: "blade", target: "bl", meaning: "날", emoji: "🔪" },
       { word: "flag", target: "fl", meaning: "깃발", emoji: "🚩" },
       { word: "frog", target: "fr", meaning: "개구리", emoji: "🐸" },
       { word: "glass", target: "gl", meaning: "유리컵", emoji: "🍷" },
       { word: "glove", target: "gl", meaning: "장갑", emoji: "🧤" },
       { word: "clock", target: "cl", meaning: "시계", emoji: "⏰" },
       { word: "cloud", target: "cl", meaning: "구름", emoji: "☁️" },
+      { word: "plug", target: "pl", meaning: "플러그", emoji: "🔌" },
       { word: "plum", target: "pl", meaning: "자두", emoji: "🫐" },
       { word: "slide", target: "sl", meaning: "미끄럼틀", emoji: "🛝" }
     ]
@@ -150,7 +154,8 @@ const unitsData = {
       { word: "frog", target: "fr", meaning: "개구리", emoji: "🐸" },
       { word: "frame", target: "fr", meaning: "액자", emoji: "🖼️" },
       { word: "grape", target: "gr", meaning: "포도", emoji: "🍇" },
-      { word: "grass", target: "gr", meaning: "잔디", emoji: "🌿" }
+      { word: "grass", target: "gr", meaning: "잔디", emoji: "🌿" },
+      { word: "tree", target: "tr", meaning: "나무", emoji: "🌳" }
     ]
   },
   u3: {
@@ -195,6 +200,9 @@ function saveUser() {
 function switchUnit(u) {
   currentUnit = u;
   selectedWordIndex = 0;
+  matchSelected = null;
+  matchedCount = 0;
+  window.matchCards = null;
   document.querySelectorAll('.unit-btn').forEach((btn, idx) => {
     btn.classList.toggle('active', `u${idx+1}` === u);
   });
@@ -206,6 +214,7 @@ function switchMode(m) {
   selectedWordIndex = 0;
   matchSelected = null;
   matchedCount = 0;
+  window.matchCards = null;
   const modes = ['listen', 'blend', 'match', 'spell', 'blank'];
   document.querySelectorAll('.mode-btn').forEach((btn, idx) => {
     btn.classList.toggle('active', modes[idx] === m);
@@ -217,7 +226,7 @@ function renderUI() {
   const words = unitsData[currentUnit].words;
   const currentObj = words[selectedWordIndex];
   
-  document.getElementById("modeTitle").textContent = `${unitsData[currentUnit].title}`;
+  document.getElementById("modeTitle").textContent = unitsData[currentUnit].title;
   
   const mainDisplay = document.getElementById("mainDisplay");
   const bottomContent = document.getElementById("bottomContent");
@@ -227,6 +236,7 @@ function renderUI() {
     mainDisplay.innerHTML = `
       <div class="display-emoji">${currentObj.emoji}</div>
       <div class="display-word">${currentObj.word}</div>
+      <div class="display-meaning">"${currentObj.meaning}"</div>
       <button class="speaker-btn" onclick="speak('${currentObj.word}')">🔊 크게 듣기</button>
     `;
     
@@ -247,6 +257,7 @@ function renderUI() {
     mainDisplay.innerHTML = `
       <div class="display-emoji">${currentObj.emoji}</div>
       <div class="display-word">${currentObj.word}</div>
+      <div class="display-meaning">"${currentObj.meaning}"</div>
       <button class="speaker-btn" onclick="playPhonicsBlend('${currentObj.target}', '${currentObj.word}')">🔊 파닉스 조합 듣기</button>
     `;
     
@@ -264,10 +275,9 @@ function renderUI() {
   // 3. 짝맞추기 모드
   else if(currentMode === "match") {
     mainDisplay.innerHTML = `
-      <div style="font-size:20px; color:#e91e63; font-weight:bold;">🧩 그림과 단어를 짝지어 보세요!</div>
+      <div style="font-size:18px; color:#e91e63; font-weight:bold;">🧩 그림 카드와 단어 카드를 짝지어 보세요!</div>
     `;
     
-    // 카드가 아직 생성되지 않았다면 섞어서 준비
     if(!window.matchCards || window.matchCardsUnit !== currentUnit) {
       window.matchCardsUnit = currentUnit;
       let list = [];
@@ -295,11 +305,12 @@ function renderUI() {
   else if(currentMode === "spell") {
     mainDisplay.innerHTML = `
       <div class="display-emoji">${currentObj.emoji}</div>
-      <button class="speaker-btn" onclick="speak('${currentObj.word}')">🔊 소리 듣기</button>
+      <div class="display-meaning">"${currentObj.meaning}"</div>
+      <button class="speaker-btn" onclick="speak('${currentObj.word}')">🔊 소리 듣고 단어 쓰기</button>
     `;
     
     bottomContent.innerHTML = `
-      <input type="text" id="spellInput" class="spell-input" placeholder="단어를 입력하세요" autofocus>
+      <input type="text" id="spellInput" class="spell-input" placeholder="정답을 영어로 입력하세요" autofocus>
       <button class="spell-submit" onclick="checkSpellAnswer()">확인 🚀</button>
     `;
   }
@@ -309,6 +320,7 @@ function renderUI() {
     mainDisplay.innerHTML = `
       <div class="display-emoji">${currentObj.emoji}</div>
       <div class="display-word">${blankWord}</div>
+      <div class="display-meaning">"${currentObj.meaning}"</div>
     `;
 
     const targets = Array.from(new Set(words.map(w => w.target)));
@@ -321,8 +333,7 @@ function renderUI() {
   }
 }
 
-// ---------------- 클릭 및 핸들러 로직 ----------------
-
+// 이벤트 및 게임 로직
 function selectListenCard(idx) {
   selectedWordIndex = idx;
   renderUI();
@@ -419,7 +430,7 @@ function speak(text, lang = 'en-US', callback = null) {
   }
 }
 
-// 구글 시트 연동 데이터 전송 함수
+// 구글 시트 전송 함수
 function sendResultToGoogleSheets(activityName, score) {
   if(!GOOGLE_SCRIPT_URL) return;
 
