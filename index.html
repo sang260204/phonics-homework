@@ -28,7 +28,7 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useRef } = React;
 
     const UNITS = [
       {
@@ -120,33 +120,38 @@
       const [flipped, setFlipped] = useState([]);
       const [matched, setMatched] = useState([]);
 
+      const audioRef = useRef(new Audio());
       const activeUnitObj = UNITS[currentUnit];
 
-      // 모바일 웹 호환 완벽 음성 출력 로직
+      // 모바일 오디오 호환 100% MP3 스트리밍 로직
       const playSound = (text) => {
-        if (!('speechSynthesis' in window)) return;
-        
-        window.speechSynthesis.cancel(); // 이전 소리 중단
-
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'en-US';
-        utterance.rate = 0.85; // 아이들이 잘 들을 수 있게 약간 천천히
-        utterance.pitch = 1.0;
-
-        // 아이폰/안드로이드 음성 목록에서 미국 영어 선택 지원
-        const voices = window.speechSynthesis.getVoices();
-        const enVoice = voices.find(v => v.lang.includes('en-US') || v.lang.includes('en'));
-        if (enVoice) {
-          utterance.voice = enVoice;
-        }
-
-        window.speechSynthesis.speak(utterance);
-      };
-
-      // 모바일 최초 터치시 음성 엔진 활성화
-      const handleUserInteraction = () => {
-        if ('speechSynthesis' in window && window.speechSynthesis.paused) {
-          window.speechSynthesis.resume();
+        try {
+          const encodedText = encodeURIComponent(text);
+          // 구글 번역 고음질 원어민 오디오 스트림
+          const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=en&client=tw-ob`;
+          
+          if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+            audioRef.current.src = url;
+            
+            // 모바일 터치 이벤트 직후 즉시 재생
+            const playPromise = audioRef.current.play();
+            if (playPromise !== undefined) {
+              playPromise.catch(error => {
+                console.log("Audio play error, retrying fallback:", error);
+                // 모바일 브라우저 예외 보완
+                if ('speechSynthesis' in window) {
+                  window.speechSynthesis.cancel();
+                  const u = new SpeechSynthesisUtterance(text);
+                  u.lang = 'en-US';
+                  window.speechSynthesis.speak(u);
+                }
+              });
+            }
+          }
+        } catch (e) {
+          console.error(e);
         }
       };
 
@@ -163,12 +168,6 @@
         setFlipped([]);
         setMatched([]);
       };
-
-      useEffect(() => {
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.getVoices();
-        }
-      }, []);
 
       useEffect(() => {
         if (activeUnitObj) {
@@ -219,7 +218,6 @@
       };
 
       const handleCardClick = (index) => {
-        handleUserInteraction();
         if (flipped.length === 2 || flipped.includes(index) || matched.includes(index)) return;
 
         const newFlipped = [...flipped, index];
@@ -247,14 +245,14 @@
 
       if (!isRegistered) {
         return (
-          <div className="max-w-md mx-auto mt-12 p-6 bg-white rounded-3xl shadow-xl border-4 border-pink-200 text-center" onClick={handleUserInteraction}>
+          <div className="max-w-md mx-auto mt-12 p-6 bg-white rounded-3xl shadow-xl border-4 border-pink-200 text-center">
             <h1 className="text-3xl font-black text-pink-500 mb-2">🎈 파닉스 플레이랜드</h1>
             <p className="text-gray-500 text-sm mb-6">학습을 시작할 학생 정보를 입력해주세요!</p>
             <form onSubmit={(e) => { 
               e.preventDefault(); 
               if(studentName.trim()) {
                 setIsRegistered(true); 
-                playSound('Welcome to Phonics Playland!');
+                playSound('Welcome to Phonics Playland');
               }
             }} className="space-y-4">
               <div className="text-left">
@@ -289,7 +287,7 @@
       }
 
       return (
-        <div className="max-w-md mx-auto p-4 space-y-4" onClick={handleUserInteraction}>
+        <div className="max-w-md mx-auto p-4 space-y-4">
           <div className="bg-white rounded-2xl p-3 shadow-md border-2 border-pink-100 flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <span className="text-2xl">👧</span>
