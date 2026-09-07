@@ -1,101 +1,139 @@
-// Unit 데이터 정의
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>파닉스 홈워크</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Gamja Flower', sans-serif, Arial; }
+    body { background-color: #fce4ec; display: flex; justify-content: center; padding: 20px; }
+    .container { width: 100%; max-width: 480px; background: white; border-radius: 20px; padding: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+    
+    /* 유닛 탭 */
+    .nav-units { display: flex; justify-content: space-between; margin-bottom: 15px; }
+    .unit-btn { flex: 1; margin: 0 3px; padding: 10px; border: none; border-radius: 12px; background: #f0f0f0; font-weight: bold; cursor: pointer; }
+    .unit-btn.active { background: #e91e63; color: white; }
+
+    /* 메인 디스플레이 영역 */
+    .main-display { background: #fffde7; border: 3px solid #fff59d; border-radius: 15px; padding: 20px; text-align: center; margin-bottom: 20px; }
+    .display-emoji { font-size: 80px; margin-bottom: 10px; }
+    .display-word { font-size: 36px; font-weight: bold; color: #d81b60; margin-bottom: 5px; }
+    .display-meaning { font-size: 20px; color: #555; }
+
+    /* 하단 카드 그리드 */
+    .card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .card-item { background: #f9f9f9; border: 2px solid #eee; border-radius: 12px; padding: 15px 5px; text-align: center; cursor: pointer; transition: 0.2s; }
+    .card-item:hover { border-color: #e91e63; background: #fff0f5; }
+    .card-emoji { font-size: 32px; }
+    .card-word { font-size: 16px; font-weight: bold; margin-top: 5px; color: #333; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- 상단 유닛 선택 버튼 -->
+  <div class="nav-units">
+    <button class="unit-btn" onclick="loadUnit('u1')">U1</button>
+    <button class="unit-btn" onclick="loadUnit('u2')">U2</button>
+    <button class="unit-btn" onclick="loadUnit('u3')">U3</button>
+    <button class="unit-btn active" onclick="loadUnit('u4')">U4</button>
+  </div>
+
+  <!-- 메인 카드 정보 상자 -->
+  <div class="main-display">
+    <div id="display-emoji" class="display-emoji">💍</div>
+    <div id="display-word" class="display-word">ring</div>
+    <div id="display-meaning" class="display-meaning">"반지"</div>
+  </div>
+
+  <!-- 하단 9개 단어 카드 목록 -->
+  <div id="grid-cards" class="card-grid"></div>
+</div>
+
+<script>
+// Unit 데이터 정의 (단어 정정 완료)
 const unitsData = {
   u1: {
-    title: "Unit 1: L-Blends",
     words: [
-      { word: "flag", targetLetter: "fl", meaning: "깃발", emoji: "🚩" },
-      { word: "frog", targetLetter: "fr", meaning: "개구리", emoji: "🐸" },
-      { word: "glass", targetLetter: "gl", meaning: "유리컵", emoji: "🍷" },
-      { word: "glove", targetLetter: "gl", meaning: "장갑", emoji: "🧤" },
-      { word: "clock", targetLetter: "cl", meaning: "시계", emoji: "⏰" },
-      { word: "cloud", targetLetter: "cl", meaning: "구름", emoji: "☁️" },
-      { word: "plum", targetLetter: "pl", meaning: "자두", emoji: "🫐" },
-      { word: "plug", targetLetter: "pl", meaning: "플러그", emoji: "🔌" },
-      { word: "slide", targetLetter: "sl", meaning: "미끄럼틀", emoji: "🛝" }
+      { word: "flag", meaning: "깃발", emoji: "🚩" },
+      { word: "frog", meaning: "개구리", emoji: "🐸" },
+      { word: "glass", meaning: "유리컵", emoji: "🍷" },
+      { word: "glove", meaning: "장갑", emoji: "🧤" },
+      { word: "clock", meaning: "시계", emoji: "⏰" },
+      { word: "cloud", meaning: "구름", emoji: "☁️" },
+      { word: "plum", meaning: "자두", emoji: "🫐" },
+      { word: "plug", meaning: "플러그", emoji: "🔌" },
+      { word: "slide", meaning: "미끄럼틀", emoji: "🛝" }
     ]
   },
   u2: {
-    title: "Unit 2: R-Blends",
     words: [
-      { word: "crab", targetLetter: "cr", meaning: "게", emoji: "🦀" },
-      { word: "crown", targetLetter: "cr", meaning: "왕관", emoji: "👑" },
-      { word: "drum", targetLetter: "dr", meaning: "드럼", emoji: "🥁" },
-      { word: "dress", targetLetter: "dr", meaning: "드레스", emoji: "👗" },
-      { word: "frog", targetLetter: "fr", meaning: "개구리", emoji: "🐸" },
-      { word: "frame", targetLetter: "fr", meaning: "액자", emoji: "🖼️" },
-      { word: "grape", targetLetter: "gr", meaning: "포도", emoji: "🍇" },
-      { word: "grass", targetLetter: "gr", meaning: "잔디", emoji: "🌿" },
-      { word: "tree", targetLetter: "tr", meaning: "나무", emoji: "🌳" }
+      { word: "crab", meaning: "게", emoji: "🦀" },
+      { word: "crown", meaning: "왕관", emoji: "👑" },
+      { word: "drum", meaning: "드럼", emoji: "🥁" },
+      { word: "dress", meaning: "드레스", emoji: "👗" },
+      { word: "frog", meaning: "개구리", emoji: "🐸" },
+      { word: "frame", meaning: "액자", emoji: "🖼️" },
+      { word: "grape", meaning: "포도", emoji: "🍇" },
+      { word: "grass", meaning: "잔디", emoji: "🌿" },
+      { word: "tree", meaning: "나무", emoji: "🌳" }
     ]
   },
   u3: {
-    title: "Unit 3: S-Blends",
     words: [
-      { word: "skate", targetLetter: "sk", meaning: "스케이트", emoji: "⛸️" },
-      { word: "skirt", targetLetter: "sk", meaning: "치마", emoji: "👗" },
-      { word: "smile", targetLetter: "sm", meaning: "미소", emoji: "😊" },
-      { word: "smoke", targetLetter: "sm", meaning: "연기", emoji: "🌫️" },
-      { word: "snake", targetLetter: "sn", meaning: "뱀", emoji: "🐍" },
-      { word: "snow", targetLetter: "sn", meaning: "눈", emoji: "❄️" },
-      { word: "spoon", targetLetter: "sp", meaning: "숟가락", emoji: "🥄" },
-      { word: "spider", targetLetter: "sp", meaning: "거미", emoji: "🕷️" },
-      { word: "star", targetLetter: "st", meaning: "별", emoji: "⭐" }
+      { word: "skate", meaning: "스케이트", emoji: "⛸️" },
+      { word: "skirt", meaning: "치마", emoji: "👗" },
+      { word: "smile", meaning: "미소", emoji: "😊" },
+      { word: "smoke", meaning: "연기", emoji: "🌫️" },
+      { word: "snake", meaning: "뱀", emoji: "🐍" },
+      { word: "snow", meaning: "눈", emoji: "❄️" },
+      { word: "spoon", meaning: "숟가락", emoji: "🥄" },
+      { word: "spider", meaning: "거미", emoji: "🕷️" },
+      { word: "star", meaning: "별", emoji: "⭐" }
     ]
   },
   u4: {
-    title: "Unit 4: Digraphs",
     words: [
-      { word: "ship", targetLetter: "sh", meaning: "배", emoji: "🚢" },
-      { word: "fish", targetLetter: "sh", meaning: "물고기", emoji: "🐟" },
-      { word: "duck", targetLetter: "ck", meaning: "오리", emoji: "🦆" },
-      { word: "ring", targetLetter: "ng", meaning: "반지", emoji: "💍" },
-      { word: "sing", targetLetter: "ng", meaning: "노래", emoji: "🎤" },
-      { word: "king", targetLetter: "ng", meaning: "왕", emoji: "👑" },
-      { word: "bench", targetLetter: "ch", meaning: "벤치", emoji: "🪑" },
-      { word: "beach", targetLetter: "ch", meaning: "해변", emoji: "🏖️" },
-      { word: "thin", targetLetter: "th", meaning: "마른", emoji: "🧍" }
+      { word: "ship", meaning: "배", emoji: "🚢" },
+      { word: "fish", meaning: "물고기", emoji: "🐟" },
+      { word: "duck", meaning: "오리", emoji: "🦆" },
+      { word: "ring", meaning: "반지", emoji: "💍" },
+      { word: "sing", meaning: "노래", emoji: "🎤" },
+      { word: "king", meaning: "왕", emoji: "👑" },
+      { word: "bench", meaning: "벤치", emoji: "🪑" },
+      { word: "beach", meaning: "해변", emoji: "🏖️" },
+      { word: "thin", meaning: "마른", emoji: "🧍" }
     ]
   }
 };
 
 let currentUnit = "u4";
-let currentWordIndex = 0;
 
-// 웹페이지 로드 시 실행
 document.addEventListener("DOMContentLoaded", () => {
-  loadUnit(currentUnit);
+  loadUnit('u4');
 });
 
-// Unit 변경 함수
 function loadUnit(unitKey) {
   currentUnit = unitKey;
-  const unitData = unitsData[unitKey];
   
-  // 제목 업데이트
-  const unitTitleElement = document.getElementById("unit-title");
-  if (unitTitleElement) {
-    unitTitleElement.textContent = unitData.title;
-  }
-  
-  // 하단 카드리스트 생성
-  renderGridCards(unitData.words);
-  
-  // 첫 번째 단어로 대표 카드 표시
+  // 버튼 활성화 스타일 변경
+  document.querySelectorAll('.unit-btn').forEach((btn, idx) => {
+    btn.classList.toggle('active', `u${idx+1}` === unitKey);
+  });
+
+  const words = unitsData[unitKey].words;
+  renderGridCards(words);
   selectCard(0);
 }
 
-// 하단 카드 리스트 렌더링
 function renderGridCards(words) {
   const gridContainer = document.getElementById("grid-cards");
-  if (!gridContainer) return;
-  
   gridContainer.innerHTML = "";
   
   words.forEach((item, index) => {
     const cardDiv = document.createElement("div");
     cardDiv.className = "card-item";
     cardDiv.onclick = () => selectCard(index);
-    
     cardDiv.innerHTML = `
       <div class="card-emoji">${item.emoji}</div>
       <div class="card-word">${item.word}</div>
@@ -104,31 +142,26 @@ function renderGridCards(words) {
   });
 }
 
-// 카드 선택 시 상단 메인 영역에 단어 및 뜻 표시 (오류 수정 핵심)
 function selectCard(index) {
-  currentWordIndex = index;
   const wordObj = unitsData[currentUnit].words[index];
   
-  const displayEmoji = document.getElementById("display-emoji");
-  const displayWord = document.getElementById("display-word");
-  const displayMeaning = document.getElementById("display-meaning");
+  document.getElementById("display-emoji").textContent = wordObj.emoji;
+  document.getElementById("display-word").textContent = wordObj.word;
+  document.getElementById("display-meaning").textContent = `"${wordObj.meaning}"`;
   
-  // 단어 전체(ring, fish 등)가 정확히 표기되도록 wordObj.word 연결
-  if (displayEmoji) displayEmoji.textContent = wordObj.emoji;
-  if (displayWord) displayWord.textContent = wordObj.word;
-  if (displayMeaning) displayMeaning.textContent = `"${wordObj.meaning}"`;
-  
-  // 음성 재생 (지원되는 브라우저)
   speakWord(wordObj.word);
 }
 
-// 음성 재생 함수 (TTS)
 function speakWord(text) {
   if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel(); // 이전 음성 중단
+    window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'en-US';
-    utterance.rate = 0.8; // 천천히 발음
+    utterance.rate = 0.8;
     window.speechSynthesis.speak(utterance);
   }
 }
+</script>
+
+</body>
+</html>
