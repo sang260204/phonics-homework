@@ -9,8 +9,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- React 18 & ReactDOM -->
-  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
   <!-- Babel for JSX -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -67,7 +67,21 @@
   </style>
 </head>
 <body class="min-h-screen text-slate-700 pb-16">
-  <div id="root"></div>
+  <div id="root">
+    <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-size: 20px; font-weight: bold; color: #db2777;">
+      🎈 파닉스 플레이랜드를 불러오는 중입니다...
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    window.firebaseModules = { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, getDoc, setDoc, onSnapshot };
+    window.firebaseLoaded = true;
+    window.dispatchEvent(new Event('firebase-ready'));
+  </script>
 
   <script type="text/babel">
     const UNITS_DATA = [
@@ -252,41 +266,208 @@
       }
     };
 
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-phonics-app';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+
     function App() {
-      const [studentName, setStudentName] = React.useState(() => localStorage.getItem("pk_student_name") || "");
-      const [grade, setGrade] = React.useState(() => localStorage.getItem("pk_grade") || "유치부");
-      const [isLoggedIn, setIsLoggedIn] = React.useState(() => !!localStorage.getItem("pk_student_name"));
+      const [user, setUser] = React.useState(null);
+      const [studentName, setStudentName] = React.useState("");
+      const [grade, setGrade] = React.useState("유치부");
+      const [totalScore, setTotalScore] = React.useState(0);
+      const [isSynced, setIsSynced] = React.useState(false);
+      
+      // Google Sheets Web App URL state
+      const [sheetWebhookUrl, setSheetWebhookUrl] = React.useState(() => {
+        return localStorage.getItem('phnics_sheet_webhook') || "";
+      });
+      const [showSettings, setShowSettings] = React.useState(false);
+      const [syncStatusMsg, setSyncStatusMsg] = React.useState("");
 
       const [activeUnitId, setActiveUnitId] = React.useState(1);
       const [activeMode, setActiveMode] = React.useState('listen');
-      const [totalScore, setTotalScore] = React.useState(() => parseInt(localStorage.getItem("pk_score") || "0", 10));
 
       const currentUnit = UNITS_DATA.find(u => u.id === activeUnitId) || UNITS_DATA[0];
 
-      const handleLoginSubmit = (e) => {
+      React.useEffect(() => {
+        const handleFirebaseReady = async () => {
+          if (!window.firebaseLoaded || !firebaseConfig) return;
+          try {
+            const { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, getDoc } = window.firebaseModules;
+            const app = window.firebaseModules.initializeApp(firebaseConfig);
+            const auth = getAuth(app);
+            const db = getFirestore(app);
+
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+              await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+              await signInAnonymously(auth);
+            }
+
+            onAuthStateChanged(auth, async (u) => {
+              if (u) {
+                setUser(u);
+                const userDocRef = doc(db, 'artifacts', appId, 'users', u.uid, 'profile', 'data');
+                const docSnap = await getDoc(userDocRef);
+                if (docSnap.exists()) {
+                  const data = docSnap.data();
+                  if (data.studentName) setStudentName(data.studentName);
+                  if (data.grade) setGrade(data.grade);
+                  if (typeof data.totalScore === 'number') setTotalScore(data.totalScore);
+                  setIsSynced(true);
+                }
+              }
+            });
+          } catch (err) {
+            console.error("Firebase init note:", err);
+          }
+        };
+
+        if (window.firebaseLoaded) {
+          handleFirebaseReady();
+        } else {
+          window.addEventListener('firebase-ready', handleFirebaseReady);
+          return () => window.removeEventListener('firebase-ready', handleFirebaseReady);
+        }
+      }, []);
+
+      // Function to send score data to Google Sheets via Webhook (Google Apps Script)
+      const sendDataToGoogleSheet = async (currentScore, activityName = "General") => {
+        if (!sheetWebhookUrl.trim()) return;
+        try {
+          // Send via no-cors or standard fetch depending on Apps Script deployment
+          const payload = {
+            studentName: studentName,
+            grade: grade,
+            score: currentScore,
+            activity: activityName,
+            timestamp: new Date().toLocaleString()
+          };
+          
+          await fetch(sheetWebhookUrl.trim(), {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          setSyncStatusMsg("📊 구글시트 전송 완료!");
+          setTimeout(() => setSyncStatusMsg(""), 3000);
+        } catch (e) {
+          console.error("Sheet sync error:", e);
+          setSyncStatusMsg("⚠️ 시트 전송 실패 (URL 확인)");
+          setTimeout(() => setSyncStatusMsg(""), 3000);
+        }
+      };
+
+      const handleLoginSubmit = async (e) => {
         e.preventDefault();
         if (!studentName.trim()) return;
-        localStorage.setItem("pk_student_name", studentName.trim());
-        localStorage.setItem("pk_grade", grade);
-        setIsLoggedIn(true);
+
+        if (window.firebaseLoaded && firebaseConfig) {
+          try {
+            const { getAuth, getFirestore, doc, setDoc } = window.firebaseModules;
+            const auth = getAuth();
+            const db = getFirestore();
+            if (auth.currentUser) {
+              const userDocRef = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'profile', 'data');
+              await setDoc(userDocRef, {
+                studentName: studentName.trim(),
+                grade,
+                totalScore,
+                updatedAt: new Date().toISOString()
+              }, { merge: true });
+              setIsSynced(true);
+            }
+          } catch (err) {
+            console.error("Sync error:", err);
+          }
+        }
+
+        if (sheetWebhookUrl.trim()) {
+          sendDataToGoogleSheet(totalScore, "Login/Start");
+        }
+
         speakText(`Welcome, ${studentName.trim()}! Let's study phonics!`);
       };
 
-      const handleScoreGain = (points) => {
-        setTotalScore(prev => {
-          const updated = prev + points;
-          localStorage.setItem("pk_score", updated);
-          return updated;
-        });
+      const handleScoreGain = async (points, activityName = "Activity") => {
+        const updatedScore = totalScore + points;
+        setTotalScore(updatedScore);
+
+        if (window.firebaseLoaded && firebaseConfig) {
+          try {
+            const { getAuth, getFirestore, doc, setDoc } = window.firebaseModules;
+            const auth = getAuth();
+            const db = getFirestore();
+            if (auth.currentUser && studentName) {
+              const userDocRef = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'profile', 'data');
+              await setDoc(userDocRef, {
+                studentName,
+                grade,
+                totalScore: updatedScore,
+                updatedAt: new Date().toISOString()
+              }, { merge: true });
+            }
+          } catch (err) {
+            console.error("Failed to sync score:", err);
+          }
+        }
+
+        if (sheetWebhookUrl.trim()) {
+          sendDataToGoogleSheet(updatedScore, activityName);
+        }
       };
 
-      if (!isLoggedIn) {
+      const saveWebhookUrl = (e) => {
+        e.preventDefault();
+        localStorage.setItem('phnics_sheet_webhook', sheetWebhookUrl.trim());
+        setShowSettings(false);
+        setSyncStatusMsg("✅ 구글시트 연동 주소 저장됨!");
+        setTimeout(() => setSyncStatusMsg(""), 3000);
+      };
+
+      if (!studentName) {
         return (
-          <div className="max-w-md mx-auto px-4 pt-12 text-center">
+          <div className="max-w-md mx-auto px-4 pt-8 text-center">
             <div className="bg-white rounded-3xl p-6 sm:p-8 border-4 border-pink-300 bubbly-card">
               <div className="text-7xl mb-3 bounce-gentle">🎈</div>
               <h1 className="text-2xl font-black text-pink-500 mb-1">파닉스 키즈 플레이랜드</h1>
-              <p className="text-xs font-extrabold text-slate-400 mb-6">신나는 이중자음 & 음가 탐험 세계!</p>
+              <p className="text-xs font-extrabold text-slate-400 mb-2">원어민 발음 & 구글시트 연동 가능!</p>
+              
+              <div className="flex justify-center gap-2 mb-4">
+                <div className="inline-block bg-emerald-100 text-emerald-700 font-bold text-[11px] px-3 py-1 rounded-full">
+                  ✨ 클라우드 저장 활성화됨
+                </div>
+                <button
+                  onClick={() => setShowSettings(!showSettings)}
+                  className="bg-purple-100 text-purple-700 font-bold text-[11px] px-3 py-1 rounded-full hover:bg-purple-200"
+                >
+                  📊 구글시트 연동 설정 ⚙️
+                </button>
+              </div>
+
+              {showSettings && (
+                <form onSubmit={saveWebhookUrl} className="mb-6 bg-purple-50 p-4 rounded-2xl border-2 border-purple-200 text-left">
+                  <label className="text-[11px] font-bold text-purple-700 block mb-1">
+                    Google Apps Script 웹앱 URL 입력:
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://script.google.com/macros/s/.../exec"
+                    value={sheetWebhookUrl}
+                    onChange={(e) => setSheetWebhookUrl(e.target.value)}
+                    className="w-full p-2.5 text-xs rounded-xl border border-purple-300 bg-white font-mono mb-2 outline-none"
+                  />
+                  <div className="text-[10px] text-slate-500 mb-3 leading-tight">
+                    * 구글 스프레드시트의 <b>[확장 프로그램] &gt; [Apps Script]</b>에 웹앱 배포 코드를 넣고 얻은 URL을 붙여넣으세요!
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-purple-600 text-white font-bold py-2 rounded-xl text-xs"
+                  >
+                    연동 주소 저장하기
+                  </button>
+                </form>
+              )}
 
               <form onSubmit={handleLoginSubmit} className="space-y-4 text-left">
                 <div>
@@ -329,29 +510,84 @@
 
       return (
         <div className="max-w-md mx-auto px-3 pt-3">
-          {/* Header Bar */}
+          {}
           <header className="bg-white rounded-2xl p-3 mb-3 border-2 border-pink-200 flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center text-xl">🎈</div>
               <div>
-                <div className="text-[11px] font-bold text-pink-500">{grade}</div>
+                <div className="text-[11px] font-bold text-pink-500 flex items-center gap-1">
+                  <span>{grade}</span>
+                  <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">🟢 연동됨</span>
+                  {sheetWebhookUrl && <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">📊 시트연동</span>}
+                </div>
                 <div className="text-base font-black text-slate-800 leading-none">{studentName}</div>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className="bg-amber-100 border border-amber-300 rounded-xl px-3 py-1 flex items-center gap-1 shadow-xs">
+            <div className="flex items-center gap-1.5">
+              <div className="bg-amber-100 border border-amber-300 rounded-xl px-2.5 py-1 flex items-center gap-1 shadow-xs">
                 <span className="text-base">⭐</span>
                 <span className="font-black text-amber-700 text-sm">{totalScore}점</span>
               </div>
               <button
-                onClick={() => setIsLoggedIn(false)}
-                className="p-2 rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 text-xs font-bold"
+                onClick={() => setShowSettings(!showSettings)}
+                className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-3 py-2 rounded-xl text-xs font-black shadow-sm flex items-center gap-1 bubbly-btn hover:opacity-95 animate-pulse"
+                title="구글시트 설정"
               >
-                👤 변경
+                <span>⚙️</span>
+                <span>설정</span>
+              </button>
+              <button
+                onClick={() => setStudentName("")}
+                className="p-2 rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 text-xs font-bold"
+                title="로그아웃/이름변경"
+              >
+                👤
               </button>
             </div>
           </header>
+
+          {syncStatusMsg && (
+            <div className="bg-emerald-500 text-white text-xs font-bold py-2 px-3 rounded-xl mb-3 text-center shadow-sm animate-pulse">
+              {syncStatusMsg}
+            </div>
+          )}
+
+          {/* Settings Modal Bar */}
+          {showSettings && (
+            <div className="bg-purple-50 p-4 rounded-2xl border-2 border-purple-200 mb-3 text-left">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs font-black text-purple-700">📊 구글시트 연동 (Google Apps Script)</span>
+                <button onClick={() => setShowSettings(false)} className="text-xs font-bold text-purple-400">✕ 닫기</button>
+              </div>
+              <form onSubmit={saveWebhookUrl}>
+                <input
+                  type="url"
+                  placeholder="https://script.google.com/macros/s/.../exec"
+                  value={sheetWebhookUrl}
+                  onChange={(e) => setSheetWebhookUrl(e.target.value)}
+                  className="w-full p-2.5 text-xs rounded-xl border border-purple-300 bg-white font-mono mb-2 outline-none"
+                />
+                <div className="text-[10px] text-slate-600 mb-2 leading-tight">
+                  <b>연동 가이드:</b> 구글 스프레드시트 ➔ 확장 프로그램 ➔ Apps Script 선택 후 아래 코드를 붙여넣고 [배포] ➔ [새 배포] (웹 앱, 모든 사용자 허용)한 뒤 웹 앱 URL을 위에 넣으세요!
+                </div>
+                <div className="bg-slate-900 text-slate-200 p-2 rounded-xl text-[9px] font-mono mb-2 overflow-x-auto whitespace-pre">
+{`function doPost(e) {
+  var data = JSON.parse(e.postData.contents);
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  sheet.appendRow([data.timestamp, data.studentName, data.grade, data.score, data.activity]);
+  return ContentService.createTextOutput("Success");
+}`}
+                </div>
+                <button
+                  type="submit"
+                  className="w-full bg-purple-600 text-white font-bold py-2 rounded-xl text-xs"
+                >
+                  연동 주소 저장하기
+                </button>
+              </form>
+            </div>
+          )}
 
           {/* Unit Navigation Tabs */}
           <div className="grid grid-cols-4 gap-1.5 mb-3">
@@ -388,11 +624,11 @@
 
           {/* Activity Area Container */}
           <main className="bg-white rounded-3xl p-4 border-2 border-pink-200 bubbly-card min-h-[440px]">
-            {activeMode === 'listen' && <ListenRepeatMode unit={currentUnit} onScore={handleScoreGain} />}
-            {activeMode === 'blend' && <BlendMode unit={currentUnit} onScore={handleScoreGain} />}
-            {activeMode === 'match' && <CardMatchMode unit={currentUnit} onScore={handleScoreGain} />}
-            {activeMode === 'spelling' && <SpellingQuizMode unit={currentUnit} onScore={handleScoreGain} />}
-            {activeMode === 'missing' && <MissingLetterMode unit={currentUnit} onScore={handleScoreGain} />}
+            {activeMode === 'listen' && <ListenRepeatMode unit={currentUnit} onScore={(pts) => handleScoreGain(pts, '듣기 학습')} />}
+            {activeMode === 'blend' && <BlendMode unit={currentUnit} onScore={(pts) => handleScoreGain(pts, '단어 조합')} />}
+            {activeMode === 'match' && <CardMatchMode unit={currentUnit} onScore={(pts) => handleScoreGain(pts, '짝맞추기 게임')} />}
+            {activeMode === 'spelling' && <SpellingQuizMode unit={currentUnit} onScore={(pts) => handleScoreGain(pts, '스펠링 퀴즈')} />}
+            {activeMode === 'missing' && <MissingLetterMode unit={currentUnit} onScore={(pts) => handleScoreGain(pts, '빈칸 채우기')} />}
           </main>
         </div>
       );
@@ -439,7 +675,7 @@
             </div>
             <div className="text-sm font-bold text-slate-400 mt-1">"{selectedWord.kor}"</div>
             <div className="inline-flex items-center gap-1 bg-pink-400 text-white text-xs font-extrabold px-3 py-1 rounded-full mt-3 shadow-xs">
-              🔊 원어민 소리 듣기
+              🔊 원어민 소리 듣기 (+1점)
             </div>
           </div>
 
@@ -493,10 +729,9 @@
       return (
         <div>
           <div className="text-xs font-bold text-center text-purple-600 mb-2">
-            소리 조각을 누르고 단어를 조합해보세요!
+            소리 조각을 누르고 단어를 조합해보세요! (+5점)
           </div>
 
-          {/* Filter Target Tabs */}
           <div className="flex flex-wrap gap-1 justify-center mb-3">
             <button
               onClick={() => setSelectedTarget('ALL')}
@@ -526,7 +761,6 @@
             ))}
           </div>
 
-          {/* Word List */}
           <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1 pb-4">
             {filteredWords.map(w => (
               <div
@@ -619,7 +853,7 @@
       return (
         <div>
           <div className="flex justify-between items-center mb-3">
-            <span className="text-xs font-bold text-pink-500">같은 소리와 단어 짝을 찾으세요!</span>
+            <span className="text-xs font-bold text-pink-500">같은 소리와 단어 짝을 찾으세요! (+10점)</span>
             <button onClick={startNewGame} className="text-xs font-bold text-slate-400 underline">새로하기</button>
           </div>
 
@@ -627,7 +861,7 @@
             <div className="text-center py-10">
               <div className="text-6xl mb-2 bounce-gentle">🎉</div>
               <div className="font-black text-xl text-slate-700 mb-1">짝맞추기 성공! 완벽해요!</div>
-              <p className="text-xs font-bold text-slate-400 mb-4">+10 획득 완료!</p>
+              <p className="text-xs font-bold text-slate-400 mb-4">+10점 저장 완료!</p>
               <button onClick={startNewGame} className="bg-pink-400 text-white font-black px-6 py-3 rounded-2xl bubbly-btn text-sm">
                 한 판 더 하기 🚀
               </button>
@@ -710,7 +944,7 @@
 
       return (
         <div className="text-center">
-          <div className="text-xs font-bold text-emerald-600 mb-2">알파벳 블록을 순서대로 눌러 단어를 완성하세요</div>
+          <div className="text-xs font-bold text-emerald-600 mb-2">알파벳 블록을 순서대로 눌러 단어를 완성하세요 (+10점)</div>
           <div className="text-6xl mb-1 bounce-gentle">{currentWordObj.emoji}</div>
           <div className="text-xs font-bold text-slate-400 mb-4">"{currentWordObj.kor}"</div>
 
@@ -796,7 +1030,7 @@
 
       return (
         <div className="text-center">
-          <div className="text-xs font-bold text-sky-600 mb-2">빈칸에 들어갈 알맞은 소리를 고르세요</div>
+          <div className="text-xs font-bold text-sky-600 mb-2">빈칸에 들어갈 알맞은 소리를 고르세요 (+10점)</div>
           <div className="text-6xl mb-1 bounce-gentle">{currentWordObj.emoji}</div>
           <div className="text-xs font-bold text-slate-400 mb-4">"{currentWordObj.kor}"</div>
 
@@ -850,8 +1084,12 @@
       );
     }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    try {
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+    } catch (err) {
+      document.getElementById('root').innerHTML = `<div style="padding: 20px; color: red; font-weight: bold; text-align: center;">로드 중 오류가 발생했습니다: ${err.message}</div>`;
+    }
   </script>
 </body>
 </html>
