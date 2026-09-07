@@ -114,10 +114,27 @@
       const [quizIndex, setQuizIndex] = useState(0);
       const [userAnswer, setUserAnswer] = useState('');
       const [feedback, setFeedback] = useState('');
-      const [matchedCards, setMatchedCards] = useState([]);
-      const [selectedCard, setSelectedCard] = useState(null);
+
+      // Card Match Game States (8 Cards)
+      const [cards, setCards] = useState([]);
+      const [flipped, setFlipped] = useState([]);
+      const [matched, setMatched] = useState([]);
 
       const activeUnitObj = UNITS[currentUnit];
+
+      // 카드 게임 초기화 (단어 4개로 8장 카드 생성)
+      const initMatchGame = () => {
+        const selectedWords = activeUnitObj.words.slice(0, 4);
+        let gameCards = [];
+        selectedWords.forEach((w, index) => {
+          gameCards.push({ id: index * 2, wordId: index, type: 'icon', val: w.icon, word: w.word });
+          gameCards.push({ id: index * 2 + 1, wordId: index, type: 'text', val: w.word, word: w.word });
+        });
+        gameCards.sort(() => Math.random() - 0.5);
+        setCards(gameCards);
+        setFlipped([]);
+        setMatched([]);
+      };
 
       useEffect(() => {
         if (activeUnitObj) {
@@ -125,8 +142,9 @@
           setQuizIndex(0);
           setFeedback('');
           setUserAnswer('');
-          setMatchedCards([]);
-          setSelectedCard(null);
+          if (currentMode === 'match') {
+            initMatchGame();
+          }
         }
       }, [currentUnit, currentMode]);
 
@@ -171,6 +189,30 @@
           setQuizIndex(quizIndex + 1);
         } else {
           setQuizIndex(0);
+        }
+      };
+
+      const handleCardClick = (index) => {
+        if (flipped.length === 2 || flipped.includes(index) || matched.includes(index)) return;
+
+        const newFlipped = [...flipped, index];
+        setFlipped(newFlipped);
+        playTTS(cards[index].word);
+
+        if (newFlipped.length === 2) {
+          const card1 = cards[newFlipped[0]];
+          const card2 = cards[newFlipped[1]];
+
+          if (card1.wordId === card2.wordId) {
+            setMatched((prev) => [...prev, newFlipped[0], newFlipped[1]]);
+            setFlipped([]);
+            addScorePoints(10, '짝맞추기 게임');
+            if (matched.length + 2 === 8) {
+              setFeedback('🎉 모든 짝을 맞췄습니다!');
+            }
+          } else {
+            setTimeout(() => setFlipped([]), 1000);
+          }
         }
       };
 
@@ -335,26 +377,42 @@
               </div>
             )}
 
-            {/* 3. 짝맞추기 게임 */}
+            {/* 3. 짝맞추기 메모리 게임 (8개 카드 뒤집기) */}
             {currentMode === 'match' && (
               <div className="text-center space-y-3">
-                <span className="text-xs font-bold text-pink-500">단어에 맞는 그림을 짝지어주세요!</span>
-                <div className="grid grid-cols-3 gap-2 pt-2">
-                  {activeUnitObj.words.slice(0, 6).map((item, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        playTTS(item.word);
-                        addScorePoints(5, '짝맞추기 게임');
-                      }}
-                      className="p-3 bg-pink-50 border-2 border-pink-200 rounded-2xl flex flex-col items-center hover:bg-pink-100 active:scale-95 transition"
-                    >
-                      <span className="text-3xl">{item.icon}</span>
-                      <span className="text-xs font-black text-gray-700 mt-1">{item.word}</span>
-                    </button>
-                  ))}
+                <div className="flex justify-between items-center px-1">
+                  <span className="text-xs font-bold text-pink-500">카드를 뒤집어 같은 그림과 단어를 맞추세요!</span>
+                  <button onClick={initMatchGame} className="text-xs bg-pink-100 text-pink-600 font-bold px-2 py-1 rounded-lg">🔄 다시하기</button>
                 </div>
-                <p className="text-xs text-gray-400 font-bold">카드를 누르면 소리와 함께 +5점이 누적됩니다!</p>
+                <div className="grid grid-cols-4 gap-2 pt-1">
+                  {cards.map((card, idx) => {
+                    const isFlipped = flipped.includes(idx) || matched.includes(idx);
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => handleCardClick(idx)}
+                        className={`h-24 rounded-2xl border-2 flex flex-col items-center justify-center font-black transition-all transform active:scale-95 ${
+                          isFlipped
+                            ? 'bg-amber-50 border-amber-300 text-gray-800 shadow-md rotate-0'
+                            : 'bg-pink-400 border-pink-500 text-white text-3xl shadow'
+                        }`}
+                      >
+                        {isFlipped ? (
+                          card.type === 'icon' ? (
+                            <span className="text-4xl">{card.val}</span>
+                          ) : (
+                            <span className="text-base font-black text-pink-600">{card.val}</span>
+                          )
+                        ) : (
+                          '❓'
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                {feedback && (
+                  <div className="text-lg font-black text-green-500 pt-2">{feedback}</div>
+                )}
               </div>
             )}
 
