@@ -53,7 +53,6 @@
       0%, 100% { transform: translateY(0) scale(1); }
       50% { transform: translateY(-8px) scale(1.03); }
     }
-    /* 스크롤바 미관 개선 */
     ::-webkit-scrollbar {
       width: 6px;
     }
@@ -79,7 +78,6 @@
         targets: ["bl", "cl", "fl", "gl", "pl", "sl"],
         words: [
           { id: "u1_1", word: "black", blend: "bl", rest: "ack", kor: "검은색", emoji: "⬛" },
-          { id: "u1_2", word: "blade", blend: "bl", rest: "ade", kor: "칼날", emoji: "⚔️" },
           { id: "u1_3", word: "clock", blend: "cl", rest: "ock", kor: "시계", emoji: "⏰" },
           { id: "u1_4", word: "cloud", blend: "cl", rest: "oud", kor: "구름", emoji: "☁️" },
           { id: "u1_5", word: "flag", blend: "fl", rest: "ag", kor: "깃발", emoji: "🚩" },
@@ -87,7 +85,6 @@
           { id: "u1_7", word: "glass", blend: "gl", rest: "ass", kor: "유리컵", emoji: "🍷" },
           { id: "u1_8", word: "glove", blend: "gl", rest: "ove", kor: "장갑", emoji: "🧤" },
           { id: "u1_9", word: "plum", blend: "pl", rest: "um", kor: "자두", emoji: "🫐" },
-          { id: "u1_10", word: "plug", blend: "pl", rest: "ug", kor: "플러그", emoji: "🔌" },
           { id: "u1_11", word: "slide", blend: "sl", rest: "ide", kor: "미끄럼틀", emoji: "🛝" }
         ]
       },
@@ -105,8 +102,7 @@
           { id: "u2_6", word: "frog", blend: "fr", rest: "og", kor: "개구리", emoji: "🐸" },
           { id: "u2_7", word: "frame", blend: "fr", rest: "ame", kor: "액자", emoji: "🖼️" },
           { id: "u2_8", word: "grape", blend: "gr", rest: "ape", kor: "포도", emoji: "🍇" },
-          { id: "u2_9", word: "grass", blend: "gr", rest: "ass", kor: "잔디", emoji: "🌿" },
-          { id: "u2_10", word: "tree", blend: "tr", rest: "ee", kor: "나무", emoji: "🌳" }
+          { id: "u2_9", word: "grass", blend: "gr", rest: "ass", kor: "잔디", emoji: "🌿" }
         ]
       },
       {
@@ -514,7 +510,7 @@
             ))}
           </div>
 
-          {/* Word List (Scrollable - Ensures ALL words are accessible) */}
+          {/* Word List */}
           <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1 pb-4">
             {filteredWords.map(w => (
               <div
@@ -809,7 +805,6 @@
             )}
           </div>
 
-          {/* Option Buttons: Only English Display without Korean Brackets */}
           <div className="grid grid-cols-2 gap-2 mb-4">
             {options.map((opt, i) => (
               <button
