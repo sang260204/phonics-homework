@@ -9,24 +9,138 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Jua', 'Nunito', sans-serif; touch-action: manipulation; }
+    body {
+      background-color: #FFF5F8;
+      background-image: radial-gradient(#FFC2D1 2px, transparent 2px);
+      background-size: 24px 24px;
+    }
+  </style>
   <script>
-    // 선생님의 구글 앱스 스크립트 주소가 완전히 연결되었습니다!
+    // 선생님의 구글 앱스 스크립트 웹 앱 URL이 자동으로 적용되어 있습니다.
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4LDDETD6E2gS8jxFHecFslZL2EQ6bco4rvxdPUPhasPhdtA_dSBpaUG6my5BZZpMM/exec";
   </script>
 </head>
-<body class="bg-indigo-50 min-h-screen flex items-center justify-center p-4">
-  <div id="root" class="w-full max-w-md bg-white rounded-3xl shadow-xl overflow-hidden p-6 border-4 border-indigo-200"></div>
+<body class="min-h-screen pb-12">
+  <div id="root"></div>
 
   <script type="text/babel">
     const { useState, useEffect } = React;
 
+    const UNITS = [
+      {
+        id: 'u1',
+        title: 'Unit 1: L-Blends',
+        icon: '🐱',
+        words: [
+          { word: 'black', meaning: '검정색', icon: '⬛', sound: 'bl' },
+          { word: 'block', meaning: '블록', icon: '🧱', sound: 'bl' },
+          { word: 'blue', meaning: '파란색', icon: '🟦', sound: 'bl' },
+          { word: 'clap', meaning: '박수', icon: '👏', sound: 'cl' },
+          { word: 'clock', meaning: '시계', icon: '⏰', sound: 'cl' },
+          { word: 'flag', meaning: '깃발', icon: '🏁', sound: 'fl' },
+          { word: 'glass', meaning: '유리컵', icon: '🥛', sound: 'gl' },
+          { word: 'plane', meaning: '비행기', icon: '✈️', sound: 'pl' },
+          { word: 'slide', meaning: '미끄럼틀', icon: '🛝', sound: 'sl' },
+        ]
+      },
+      {
+        id: 'u2',
+        title: 'Unit 2: R-Blends',
+        icon: '🐸',
+        words: [
+          { word: 'bread', meaning: '빵', icon: '🍞', sound: 'br' },
+          { word: 'brown', meaning: '갈색', icon: '🟫', sound: 'br' },
+          { word: 'frog', meaning: '개구리', icon: '🐸', sound: 'fr' },
+          { word: 'grape', meaning: '포도', icon: '🍇', sound: 'gr' },
+          { word: 'green', meaning: '초록색', icon: '🟩', sound: 'gr' },
+          { word: 'tree', meaning: '나무', icon: '🌳', sound: 'tr' },
+          { word: 'truck', meaning: '트럭', icon: '🚚', sound: 'tr' },
+          { word: 'drum', meaning: '드럼', icon: '🥁', sound: 'dr' },
+          { word: 'crab', meaning: '게', icon: '🦀', sound: 'cr' },
+        ]
+      },
+      {
+        id: 'u3',
+        title: 'Unit 3: S-Blends',
+        icon: '🐊',
+        words: [
+          { word: 'star', meaning: '별', icon: '⭐', sound: 'st' },
+          { word: 'stop', meaning: '정지', icon: '🛑', sound: 'st' },
+          { word: 'snake', meaning: '뱀', icon: '🐍', sound: 'sn' },
+          { word: 'snow', meaning: '눈', icon: '❄️', sound: 'sn' },
+          { word: 'spoon', meaning: '숟가락', icon: '🥄', sound: 'sp' },
+          { word: 'smile', meaning: '미소', icon: '😊', sound: 'sm' },
+          { word: 'swim', meaning: '수영', icon: '🏊', sound: 'sw' },
+          { word: 'skate', meaning: '스케이트', icon: '⛸️', sound: 'sk' },
+          { word: 'sky', meaning: '하늘', icon: '🌤️', sound: 'sk' },
+        ]
+      },
+      {
+        id: 'u4',
+        title: 'Unit 4: Digraphs',
+        icon: '🦈',
+        words: [
+          { word: 'ship', meaning: '배', icon: '🚢', sound: 'sh' },
+          { word: 'fish', meaning: '물고기', icon: '🐟', sound: 'sh' },
+          { word: 'duck', meaning: '오리', icon: '🦆', sound: 'ck' },
+          { word: 'ring', meaning: '반지', icon: '💍', sound: 'ng' },
+          { word: 'sing', meaning: '노래', icon: '🎤', sound: 'ng' },
+          { word: 'king', meaning: '왕', icon: '👑', sound: 'ng' },
+          { word: 'bench', meaning: '벤치', icon: '🪑', sound: 'ch' },
+          { word: 'beach', meaning: '해변', icon: '🏖️', sound: 'ch' },
+          { word: 'thin', meaning: '날씬한', icon: '🧍', sound: 'th' },
+        ]
+      }
+    ];
+
     function App() {
       const [studentName, setStudentName] = useState('');
-      const [grade, setGrade] = useState('초등 3학년');
+      const [grade, setGrade] = useState('초등 3학년 이상');
       const [isRegistered, setIsRegistered] = useState(false);
+      const [currentUnit, setCurrentUnit] = useState(0);
+      const [currentMode, setCurrentMode] = useState('listen');
       const [score, setScore] = useState(0);
+      const [selectedWord, setSelectedWord] = useState(null);
 
-      const handleStart = (e) => {
+      useEffect(() => {
+        if (UNITS[currentUnit]) {
+          setSelectedWord(UNITS[currentUnit].words[0]);
+        }
+      }, [currentUnit]);
+
+      const playTTS = (text) => {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.8;
+        window.speechSynthesis.speak(utterance);
+      };
+
+      const sendResultToGoogleSheet = (unitTitle, modeTitle, addScore) => {
+        if (!GOOGLE_SCRIPT_URL) return;
+        const payload = {
+          timestamp: new Date().toLocaleString('ko-KR'),
+          grade: grade,
+          studentName: studentName,
+          unit: unitTitle,
+          activity: modeTitle,
+          score: addScore
+        };
+
+        fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).catch(err => console.error(err));
+      };
+
+      const handleRegister = (e) => {
         e.preventDefault();
         if (!studentName.trim()) {
           alert('이름을 입력해주세요!');
@@ -35,61 +149,39 @@
         setIsRegistered(true);
       };
 
-      const sendResultToGoogleSheet = (unit, activity, scoreVal) => {
-        const payload = {
-          timestamp: new Date().toLocaleString('ko-KR'),
-          grade: grade,
-          studentName: studentName,
-          unit: unit,
-          activity: activity,
-          score: scoreVal
-        };
-
-        fetch(GOOGLE_SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        }).then(() => {
-          alert('학습 결과가 선생님 구글 시트로 성공적으로 전송되었습니다! 🎉');
-        }).catch((err) => {
-          console.error('전송 실패:', err);
-        });
-      };
-
-      const handleTestComplete = () => {
-        const newScore = score + 100;
+      const addScorePoints = (points, modeName) => {
+        const newScore = score + points;
         setScore(newScore);
-        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-        sendResultToGoogleSheet('Unit 1 (Blends)', '파닉스 퀴즈', 100);
+        confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
+        sendResultToGoogleSheet(UNITS[currentUnit].title, modeName, points);
       };
 
-      return (
-        <div className="text-center font-sans">
-          {!isRegistered ? (
-            <form onSubmit={handleStart} className="space-y-4">
-              <h1 className="text-2xl font-bold text-indigo-600 mb-2">🎈 파닉스 키즈 플레이랜드</h1>
-              <p className="text-gray-500 text-sm mb-4">학습을 시작하기 위해 프로필을 입력하세요!</p>
-              
+      if (!isRegistered) {
+        return (
+          <div className="max-w-md mx-auto mt-12 p-6 bg-white rounded-3xl shadow-xl border-4 border-pink-200 text-center">
+            <h1 className="text-3xl font-black text-pink-500 mb-2">🎈 파닉스 플레이랜드</h1>
+            <p className="text-gray-500 text-sm mb-6">학습을 시작할 학생 정보를 입력해주세요!</p>
+            
+            <form onSubmit={handleRegister} className="space-y-4">
               <div className="text-left">
-                <label className="block text-sm font-semibold text-gray-700 mb-1">학생 이름</label>
+                <label className="block text-sm font-bold text-gray-700 mb-1">어린이 이름</label>
                 <input
                   type="text"
                   value={studentName}
                   onChange={(e) => setStudentName(e.target.value)}
-                  placeholder="예: 홍길동"
-                  className="w-full px-4 py-3 border-2 border-indigo-200 rounded-xl focus:outline-none focus:border-indigo-500 text-lg"
+                  placeholder="예: 이상식"
+                  className="w-full px-4 py-3 border-2 border-pink-200 rounded-2xl focus:outline-none focus:border-pink-400 text-lg font-bold"
                 />
               </div>
 
               <div className="text-left">
-                <label className="block text-sm font-semibold text-gray-700 mb-1">학년 선택</label>
+                <label className="block text-sm font-bold text-gray-700 mb-1">학년 선택</label>
                 <select
                   value={grade}
                   onChange={(e) => setGrade(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-indigo-200 rounded-xl focus:outline-none focus:border-indigo-500 text-lg bg-white"
+                  className="w-full px-4 py-3 border-2 border-pink-200 rounded-2xl focus:outline-none focus:border-pink-400 text-lg font-bold bg-white"
                 >
-                  <option value="초등 3학년">🏫 초등 3학년</option>
+                  <option value="초등 3학년 이상">🏫 초등 3학년 이상</option>
                   <option value="초등 1학년">🏫 초등 1학년</option>
                   <option value="초등 2학년">🏫 초등 2학년</option>
                   <option value="유치부">🧸 유치부</option>
@@ -98,35 +190,146 @@
 
               <button
                 type="submit"
-                className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 rounded-xl shadow-lg transition duration-200 text-lg mt-4"
+                className="w-full bg-pink-500 hover:bg-pink-600 text-white font-black py-4 rounded-2xl shadow-lg text-xl transition transform active:scale-95"
               >
                 학습 시작하기 🚀
               </button>
             </form>
-          ) : (
-            <div className="space-y-4">
-              <div className="bg-indigo-50 p-4 rounded-2xl flex justify-between items-center border border-indigo-100">
-                <div className="text-left">
-                  <span className="text-xs text-indigo-500 font-bold block">{grade}</span>
-                  <span className="text-lg font-bold text-gray-800">{studentName} 어린이</span>
-                </div>
-                <div className="bg-amber-400 text-white font-black px-3 py-1 rounded-full text-sm">
-                  ⭐ {score}점
-                </div>
-              </div>
+          </div>
+        );
+      }
 
-              <div className="py-8 bg-indigo-100/50 rounded-2xl border-2 border-dashed border-indigo-200">
-                <p className="text-xl font-bold text-indigo-700 mb-2">Unit 1: Blends (bl, cl, fl)</p>
-                <p className="text-sm text-gray-600 mb-4">단어를 듣고 맞는 소리를 찾아보세요!</p>
-                <button
-                  onClick={handleTestComplete}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-6 py-3 rounded-xl shadow-md transition text-lg"
-                >
-                  퀴즈 풀고 점수 제출하기 📝
-                </button>
+      const activeUnitObj = UNITS[currentUnit];
+
+      return (
+        <div className="max-w-md mx-auto p-4 space-y-4">
+          {/* 상단 프로필 바 */}
+          <div className="bg-white rounded-2xl p-3 shadow-md border-2 border-pink-100 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <span className="text-2xl">👧</span>
+              <div>
+                <span className="text-xs text-pink-500 font-bold block">{grade}</span>
+                <span className="text-lg font-black text-gray-800">{studentName}</span>
               </div>
             </div>
-          )}
+            <div className="flex items-center space-x-2">
+              <div className="bg-amber-100 border border-amber-300 text-amber-700 font-black px-3 py-1 rounded-full text-sm flex items-center gap-1">
+                ⭐ {score}점
+              </div>
+              <button
+                onClick={() => setIsRegistered(false)}
+                className="bg-gray-100 text-gray-600 px-2.5 py-1 rounded-lg text-xs font-bold hover:bg-gray-200"
+              >
+                👤 변경
+              </button>
+            </div>
+          </div>
+
+          {/* Unit 선택 탭 */}
+          <div className="grid grid-cols-4 gap-2">
+            {UNITS.map((u, idx) => (
+              <button
+                key={u.id}
+                onClick={() => { setCurrentUnit(idx); setCurrentMode('listen'); }}
+                className={`p-2 rounded-2xl border-b-4 font-black transition flex flex-col items-center justify-center ${
+                  currentUnit === idx
+                    ? 'bg-pink-500 text-white border-pink-700 shadow-lg scale-105'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-pink-50'
+                }`}
+              >
+                <span className="text-xl mb-1">{u.icon}</span>
+                <span className="text-xs">U{idx + 1}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Activity 선택 탭 */}
+          <div className="bg-white rounded-2xl p-2 shadow-sm border border-pink-100 grid grid-cols-5 gap-1 text-center font-bold text-xs">
+            {[
+              { id: 'listen', label: '듣기', icon: '🎧' },
+              { id: 'blend', label: '조합', icon: '🧩' },
+              { id: 'match', label: '짝맞추기', icon: '🃏' },
+              { id: 'spell', label: '스펠링', icon: '✏️' },
+              { id: 'blank', label: '빈칸', icon: '🔍' },
+            ].map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setCurrentMode(m.id)}
+                className={`py-2 rounded-xl transition flex flex-col items-center justify-center ${
+                  currentMode === m.id
+                    ? 'bg-pink-400 text-white shadow-md'
+                    : 'text-gray-500 hover:bg-pink-50'
+                }`}
+              >
+                <span className="text-base">{m.icon}</span>
+                <span>{m.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* 메인 활동 영역 */}
+          <div className="bg-white rounded-3xl p-5 shadow-lg border-4 border-pink-200 min-h-[380px] flex flex-col justify-between">
+            {currentMode === 'listen' && (
+              <div>
+                <p className="text-xs font-bold text-pink-500 text-center mb-3">
+                  {activeUnitObj.title} • 그림 카드를 눌러보세요
+                </p>
+                {selectedWord && (
+                  <div className="bg-amber-50 rounded-2xl p-4 border-2 border-amber-200 text-center mb-4">
+                    <div className="text-5xl mb-2">{selectedWord.icon}</div>
+                    <div className="text-3xl font-black text-gray-800 tracking-wide mb-1">
+                      <span className="text-pink-500">{selectedWord.word.slice(0, 2)}</span>
+                      {selectedWord.word.slice(2)}
+                    </div>
+                    <p className="text-sm font-bold text-gray-500 mb-2">"{selectedWord.meaning}"</p>
+                    <button
+                      onClick={() => playTTS(selectedWord.word)}
+                      className="bg-pink-400 hover:bg-pink-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow"
+                    >
+                      🔊 소리 듣기
+                    </button>
+                  </div>
+                )}
+                <div className="grid grid-cols-3 gap-2">
+                  {activeUnitObj.words.map((w, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => { setSelectedWord(w); playTTS(w.word); }}
+                      className={`p-2 rounded-xl border-2 text-center transition ${
+                        selectedWord?.word === w.word
+                          ? 'border-amber-400 bg-amber-100 shadow-md'
+                          : 'border-gray-100 bg-gray-50 hover:bg-pink-50'
+                      }`}
+                    >
+                      <div className="text-2xl mb-1">{w.icon}</div>
+                      <div className="text-xs font-black text-gray-700">{w.word}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {currentMode !== 'listen' && (
+              <div className="text-center py-8 space-y-4">
+                <div className="text-5xl">🎮</div>
+                <h3 className="text-xl font-black text-pink-600">
+                  {currentMode === 'blend' && '소리 조합 게임'}
+                  {currentMode === 'match' && '카드 짝맞추기 게임'}
+                  {currentMode === 'spell' && '스펠링 맞추기'}
+                  {currentMode === 'blank' && '빈칸 채우기'}
+                </h3>
+                <p className="text-sm font-bold text-gray-500">
+                  {activeUnitObj.title} 파닉스 학습 게임을 플레이하세요!
+                </p>
+                <button
+                  onClick={() => addScorePoints(10, `${currentMode} 게임`)}
+                  className="bg-emerald-400 hover:bg-emerald-500 text-white font-black px-6 py-3 rounded-2xl shadow-lg transition text-lg transform active:scale-95"
+                >
+                  게임을 완수하고 +10점 받기 🏆
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       );
     }
