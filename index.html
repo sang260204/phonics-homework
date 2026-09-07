@@ -127,7 +127,7 @@
       const activeUnitObj = UNITS[currentUnit];
 
       // 효과음 (비프음)
-      const playBeep = (freq = 440, type = 'sine', duration = 0.2) => {
+      const playBeep = (freq = 440, type = 'sine', duration = 0.15) => {
         try {
           if (!audioCtxRef.current) {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -140,7 +140,7 @@
           const gain = audioCtxRef.current.createGain();
           osc.type = type;
           osc.frequency.setValueAtTime(freq, audioCtxRef.current.currentTime);
-          gain.gain.setValueAtTime(0.1, audioCtxRef.current.currentTime);
+          gain.gain.setValueAtTime(0.08, audioCtxRef.current.currentTime);
           gain.gain.exponentialRampToValueAtTime(0.001, audioCtxRef.current.currentTime + duration);
           osc.connect(gain);
           gain.connect(audioCtxRef.current.destination);
@@ -149,62 +149,41 @@
         } catch(e) {}
       };
 
-      // 모바일 지원 영어 단어 음성 엔진
+      // 100% 호환 외부 음성 오디오 재생 (Google Audio API 사용)
       const playSound = (text) => {
-        playBeep(523.25, 'sine', 0.1); // 눌렀을 때 효과음
+        try {
+          playBeep(523.25, 'sine', 0.1); // 버튼 누름 효과음
 
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.cancel(); // 이전 재생 강제 중단
-
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.lang = 'en-US';
-          utterance.rate = 0.8; // 발음을 정확하게 듣도록 속도 살짝 조절
-          utterance.pitch = 1.0;
-
-          const voices = window.speechSynthesis.getVoices();
-          // 미국 영어 발음 우선 선택
-          const usVoice = voices.find(v => v.lang === 'en-US' || v.lang === 'en_US') ||
-                          voices.find(v => v.lang.startsWith('en'));
-          if (usVoice) {
-            utterance.voice = usVoice;
-          }
-
-          window.speechSynthesis.speak(utterance);
+          const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=en&client=tw-ob`;
+          const audio = new Audio(audioUrl);
+          audio.play().catch(() => {
+            // 외부 오디오 재생 실패 시 브라우저 내장 TTS로 차선책 보완
+            if ('speechSynthesis' in window) {
+              window.speechSynthesis.cancel();
+              const utterance = new SpeechSynthesisUtterance(text);
+              utterance.lang = 'en-US';
+              window.speechSynthesis.speak(utterance);
+            }
+          });
+        } catch (e) {
+          console.error("Audio play error:", e);
         }
       };
 
-      // 모바일 초기화 로직 (첫 터치 시 음성 준비)
-      const handleUserInteraction = () => {
-        if (!audioCtxRef.current) {
-          const AudioContext = window.AudioContext || window.webkitAudioContext;
-          audioCtxRef.current = new AudioContext();
-        }
-        if (audioCtxRef.current.state === 'suspended') {
-          audioCtxRef.current.resume();
-        }
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.resume();
-        }
-      };
-
-      // 자음과 모음이 고루 나오는 완전 무작위 빈칸 생성 함수
+      // 자음과 모음이 고루 나오는 무작위 빈칸 생성
       const setupBlankQuiz = (wordObj) => {
         if (!wordObj) return;
         const w = wordObj.word;
         
-        // 단어의 모든 글자 위치 중 무작위 1개 선택 (자음, 모음 구분 없음)
         const randomIndex = Math.floor(Math.random() * w.length);
         const targetChar = w[randomIndex];
 
-        // 선택할 오답 알파벳 풀 (자음/모음 혼합)
         const allLetters = ['a','b','c','d','e','f','g','h','i','k','l','m','n','o','p','r','s','t','u','w'];
         const wrongLetters = allLetters.filter(c => c !== targetChar);
         
-        // 랜덤으로 3개 추출
         wrongLetters.sort(() => Math.random() - 0.5);
         const selectedWrong = wrongLetters.slice(0, 3);
 
-        // 정답과 오답을 섞어 4개 보기 생성
         const options = [targetChar, ...selectedWrong].sort(() => Math.random() - 0.5);
 
         setBlankInfo({ targetIndex: randomIndex, options: options });
@@ -223,15 +202,6 @@
         setFlipped([]);
         setMatched([]);
       };
-
-      useEffect(() => {
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.getVoices();
-          window.speechSynthesis.onvoiceschanged = () => {
-            window.speechSynthesis.getVoices();
-          };
-        }
-      }, []);
 
       useEffect(() => {
         if (activeUnitObj) {
@@ -291,7 +261,6 @@
       };
 
       const handleCardClick = (index) => {
-        handleUserInteraction();
         if (flipped.length === 2 || flipped.includes(index) || matched.includes(index)) return;
 
         const newFlipped = [...flipped, index];
@@ -320,14 +289,14 @@
 
       if (!isRegistered) {
         return (
-          <div className="max-w-md mx-auto mt-12 p-6 bg-white rounded-3xl shadow-xl border-4 border-pink-200 text-center" onClick={handleUserInteraction}>
+          <div className="max-w-md mx-auto mt-12 p-6 bg-white rounded-3xl shadow-xl border-4 border-pink-200 text-center">
             <h1 className="text-3xl font-black text-pink-500 mb-2">🎈 파닉스 플레이랜드</h1>
             <p className="text-gray-500 text-sm mb-6">학습을 시작할 학생 정보를 입력해주세요!</p>
             <form onSubmit={(e) => { 
               e.preventDefault(); 
               if(studentName.trim()) {
                 setIsRegistered(true); 
-                playSound('Welcome to Phonics Playland');
+                playSound('Welcome');
               }
             }} className="space-y-4">
               <div className="text-left">
@@ -362,7 +331,7 @@
       }
 
       return (
-        <div className="max-w-md mx-auto p-4 space-y-4" onClick={handleUserInteraction}>
+        <div className="max-w-md mx-auto p-4 space-y-4">
           <div className="bg-white rounded-2xl p-3 shadow-md border-2 border-pink-100 flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <span className="text-2xl">👧</span>
@@ -385,7 +354,7 @@
             {UNITS.map((u, idx) => (
               <button
                 key={u.id}
-                onClick={() => { setCurrentUnit(idx); playSound(u.title); }}
+                onClick={() => { setCurrentUnit(idx); playSound(u.words[0].word); }}
                 className={`p-2 rounded-2xl border-b-4 font-black transition flex flex-col items-center justify-center ${
                   currentUnit === idx ? 'bg-pink-500 text-white border-pink-700 shadow-lg scale-105' : 'bg-white text-gray-600 border-gray-200 hover:bg-pink-50'
                 }`}
@@ -559,7 +528,7 @@
               </div>
             )}
 
-            {/* 5. 빈칸 채우기 (자음/모음 혼합 지원) */}
+            {/* 5. 빈칸 채우기 */}
             {currentMode === 'blank' && (
               <div className="text-center space-y-4">
                 <span className="text-xs font-bold text-pink-500">빈칸에 들어갈 올바른 글자를 맞혀보세요! ({quizIndex + 1}/{activeUnitObj.words.length})</span>
