@@ -39,11 +39,11 @@
       box-shadow: 0 10px 0px 0px rgba(255, 182, 193, 0.7), 0 12px 24px rgba(0,0,0,0.06);
     }
     .bubbly-btn {
-      box-shadow: 0 6px 0px 0px rgba(0, 0, 0, 0.12);
+      box-shadow: 0 5px 0px 0px rgba(0, 0, 0, 0.12);
       transition: all 0.12s ease-in-out;
     }
     .bubbly-btn:active {
-      transform: translateY(4px);
+      transform: translateY(3px);
       box-shadow: 0 2px 0px 0px rgba(0, 0, 0, 0.12);
     }
     .bounce-gentle {
@@ -53,120 +53,105 @@
       0%, 100% { transform: translateY(0) scale(1); }
       50% { transform: translateY(-8px) scale(1.03); }
     }
+    /* 스크롤바 미관 개선 */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #FCE7F3;
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #F472B6;
+      border-radius: 10px;
+    }
   </style>
 </head>
 <body class="min-h-screen text-slate-700 pb-12">
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useRef } = React;
-
-    // 파닉스 음가 한글 발음 및 TTS 연결 사전
-    const PHONICS_SOUND_MAP = {
-      "bl": "블르",
-      "cl": "클르",
-      "fl": "플르",
-      "gl": "글르",
-      "pl": "플르",
-      "sl": "슬르",
-      "br": "브르",
-      "cr": "크르",
-      "fr": "프르",
-      "dr": "드르",
-      "gr": "그르",
-      "tr": "트르",
-      "sk": "스크",
-      "sm": "스므",
-      "sn": "스느",
-      "st": "스트",
-      "sw": "스워",
-      "sp": "스프",
-      "sh": "쉬",
-      "ch": "치",
-      "wh": "워",
-      "th": "쓰",
-      "ph": "프",
-      "ck": "크",
-      "ng": "응"
-    };
-
     const UNITS_DATA = [
       {
         id: 1,
         title: "Unit 1: L-Blends",
-        subtitle: "bl, cl, fl, gl, pl, sl",
-        color: "from-pink-400 to-rose-400",
-        mascot: "🐱",
+        mascot: "🎈",
         targets: ["bl", "cl", "fl", "gl", "pl", "sl"],
         words: [
-          { id: "u1_1", word: "black", blend: "bl", rest: "ack", kor: "검정색", emoji: "⬛" },
-          { id: "u1_2", word: "block", blend: "bl", rest: "ock", kor: "블록", emoji: "🧱" },
-          { id: "u1_3", word: "blue", blend: "bl", rest: "ue", kor: "파란색", emoji: "🟦" },
-          { id: "u1_4", word: "clap", blend: "cl", rest: "ap", kor: "박수", emoji: "👏" },
-          { id: "u1_5", word: "clock", blend: "cl", rest: "ock", kor: "시계", emoji: "⏰" },
-          { id: "u1_6", word: "flag", blend: "fl", rest: "ag", kor: "깃발", emoji: "🏁" },
-          { id: "u1_7", word: "glass", blend: "gl", rest: "ass", kor: "유리잔", emoji: "🥛" },
-          { id: "u1_8", word: "plane", blend: "pl", rest: "ane", kor: "비행기", emoji: "✈️" },
-          { id: "u1_9", word: "slide", blend: "sl", rest: "ide", kor: "미끄럼틀", emoji: "🛝" }
+          { id: "u1_1", word: "black", blend: "bl", rest: "ack", kor: "검은색", emoji: "⬛" },
+          { id: "u1_2", word: "blade", blend: "bl", rest: "ade", kor: "칼날", emoji: "⚔️" },
+          { id: "u1_3", word: "clock", blend: "cl", rest: "ock", kor: "시계", emoji: "⏰" },
+          { id: "u1_4", word: "cloud", blend: "cl", rest: "oud", kor: "구름", emoji: "☁️" },
+          { id: "u1_5", word: "flag", blend: "fl", rest: "ag", kor: "깃발", emoji: "🚩" },
+          { id: "u1_6", word: "fly", blend: "fl", rest: "y", kor: "날다", emoji: "🪰" },
+          { id: "u1_7", word: "glass", blend: "gl", rest: "ass", kor: "유리컵", emoji: "🍷" },
+          { id: "u1_8", word: "glove", blend: "gl", rest: "ove", kor: "장갑", emoji: "🧤" },
+          { id: "u1_9", word: "plum", blend: "pl", rest: "um", kor: "자두", emoji: "🫐" },
+          { id: "u1_10", word: "plug", blend: "pl", rest: "ug", kor: "플러그", emoji: "🔌" },
+          { id: "u1_11", word: "slide", blend: "sl", rest: "ide", kor: "미끄럼틀", emoji: "🛝" }
         ]
       },
       {
         id: 2,
         title: "Unit 2: R-Blends",
-        subtitle: "br, cr, fr, dr, gr, tr",
-        color: "from-amber-400 to-orange-400",
         mascot: "🐸",
-        targets: ["br", "cr", "fr", "dr", "gr", "tr"],
+        targets: ["br", "cr", "dr", "fr", "gr", "tr"],
         words: [
-          { id: "u2_1", word: "bread", blend: "br", rest: "ead", kor: "빵", emoji: "🍞" },
-          { id: "u2_2", word: "brush", blend: "br", rest: "ush", kor: "붓", emoji: "🖌️" },
-          { id: "u2_3", word: "crab", blend: "cr", rest: "ab", kor: "게", emoji: "🦀" },
-          { id: "u2_4", word: "crown", blend: "cr", rest: "own", kor: "왕관", emoji: "👑" },
-          { id: "u2_5", word: "frog", blend: "fr", rest: "og", kor: "개구리", emoji: "🐸" },
-          { id: "u2_6", word: "drum", blend: "dr", rest: "um", kor: "드럼", emoji: "🥁" },
-          { id: "u2_7", word: "dress", blend: "dr", rest: "ess", kor: "드레스", emoji: "👗" },
-          { id: "u2_8", word: "grass", blend: "gr", rest: "ass", kor: "잔디", emoji: "🌱" },
-          { id: "u2_9", word: "truck", blend: "tr", rest: "uck", kor: "트럭", emoji: "🚚" }
+          { id: "u2_1", word: "brush", blend: "br", rest: "ush", kor: "솔/붓", emoji: "🖌️" },
+          { id: "u2_2", word: "crab", blend: "cr", rest: "ab", kor: "게", emoji: "🦀" },
+          { id: "u2_3", word: "crown", blend: "cr", rest: "own", kor: "왕관", emoji: "👑" },
+          { id: "u2_4", word: "drum", blend: "dr", rest: "um", kor: "드럼", emoji: "🥁" },
+          { id: "u2_5", word: "dress", blend: "dr", rest: "ess", kor: "드레스", emoji: "👗" },
+          { id: "u2_6", word: "frog", blend: "fr", rest: "og", kor: "개구리", emoji: "🐸" },
+          { id: "u2_7", word: "frame", blend: "fr", rest: "ame", kor: "액자", emoji: "🖼️" },
+          { id: "u2_8", word: "grape", blend: "gr", rest: "ape", kor: "포도", emoji: "🍇" },
+          { id: "u2_9", word: "grass", blend: "gr", rest: "ass", kor: "잔디", emoji: "🌿" },
+          { id: "u2_10", word: "tree", blend: "tr", rest: "ee", kor: "나무", emoji: "🌳" }
         ]
       },
       {
         id: 3,
         title: "Unit 3: S-Blends",
-        subtitle: "sk, sm, sn, st, sw, sp",
-        color: "from-emerald-400 to-teal-400",
-        mascot: "🦨",
+        mascot: "⭐",
         targets: ["sk", "sm", "sn", "st", "sw", "sp"],
         words: [
           { id: "u3_1", word: "skate", blend: "sk", rest: "ate", kor: "스케이트", emoji: "⛸️" },
-          { id: "u3_2", word: "smile", blend: "sm", rest: "ile", kor: "미소", emoji: "😊" },
-          { id: "u3_3", word: "snake", blend: "sn", rest: "ake", kor: "뱀", emoji: "🐍" },
-          { id: "u3_4", word: "star", blend: "st", rest: "ar", kor: "별", emoji: "⭐" },
-          { id: "u3_5", word: "stop", blend: "st", rest: "op", kor: "정지", emoji: "🛑" },
-          { id: "u3_6", word: "swim", blend: "sw", rest: "im", kor: "수영", emoji: "🏊" },
+          { id: "u3_2", word: "skirt", blend: "sk", rest: "irt", kor: "치마", emoji: "👗" },
+          { id: "u3_3", word: "smile", blend: "sm", rest: "ile", kor: "미소", emoji: "😊" },
+          { id: "u3_4", word: "smoke", blend: "sm", rest: "oke", kor: "연기", emoji: "🌫️" },
+          { id: "u3_5", word: "snake", blend: "sn", rest: "ake", kor: "뱀", emoji: "🐍" },
+          { id: "u3_6", word: "snow", blend: "sn", rest: "ow", kor: "눈", emoji: "❄️" },
           { id: "u3_7", word: "spoon", blend: "sp", rest: "oon", kor: "숟가락", emoji: "🥄" },
-          { id: "u3_8", word: "spider", blend: "sp", rest: "ider", kor: "거미", emoji: "🕷️" }
+          { id: "u3_8", word: "spider", blend: "sp", rest: "ider", kor: "거미", emoji: "🕷️" },
+          { id: "u3_9", word: "star", blend: "st", rest: "ar", kor: "별", emoji: "⭐" },
+          { id: "u3_10", word: "swim", blend: "sw", rest: "im", kor: "수영하다", emoji: "🏊" }
         ]
       },
       {
         id: 4,
         title: "Unit 4: Digraphs",
-        subtitle: "sh, ch, wh, th, ph, ck, ng",
-        color: "from-sky-400 to-indigo-400",
-        mascot: "🦈",
-        targets: ["sh", "ch", "wh", "th", "ph", "ck", "ng"],
+        mascot: "🚢",
+        targets: ["sh", "ch", "wh", "th", "ck", "ng"],
         words: [
-          { id: "u4_1", word: "ship", blend: "sh", rest: "ip", kor: "배", emoji: "🚢", isSuffix: false },
-          { id: "u4_2", word: "fish", blend: "sh", rest: "fi", kor: "물고기", emoji: "🐟", isSuffix: true },
-          { id: "u4_3", word: "duck", blend: "ck", rest: "du", kor: "오리", emoji: "🦆", isSuffix: true },
-          { id: "u4_4", word: "ring", blend: "ng", rest: "ri", kor: "반지", emoji: "💍", isSuffix: true },
-          { id: "u4_5", word: "sing", blend: "ng", rest: "si", kor: "노래", emoji: "🎤", isSuffix: true },
-          { id: "u4_6", word: "king", blend: "ng", rest: "ki", kor: "왕", emoji: "👑", isSuffix: true },
-          { id: "u4_7", word: "bench", blend: "ch", rest: "ben", kor: "벤치", emoji: "🪑", isSuffix: true },
-          { id: "u4_8", word: "cheese", blend: "ch", rest: "eese", kor: "치즈", emoji: "🧀", isSuffix: false },
-          { id: "u4_9", word: "thumb", blend: "th", rest: "umb", kor: "엄지", emoji: "👍", isSuffix: false }
+          { id: "u4_1", word: "ship", blend: "sh", rest: "ip", kor: "배", emoji: "🚢" },
+          { id: "u4_2", word: "fish", blend: "sh", rest: "fi", isSuffix: true, kor: "물고기", emoji: "🐟" },
+          { id: "u4_3", word: "duck", blend: "ck", rest: "du", isSuffix: true, kor: "오리", emoji: "🦆" },
+          { id: "u4_4", word: "ring", blend: "ng", rest: "ri", isSuffix: true, kor: "반지", emoji: "💍" },
+          { id: "u4_5", word: "sing", blend: "ng", rest: "si", isSuffix: true, kor: "노래하다", emoji: "🎤" },
+          { id: "u4_6", word: "king", blend: "ng", rest: "ki", isSuffix: true, kor: "왕", emoji: "👑" },
+          { id: "u4_7", word: "bench", blend: "ch", rest: "ben", isSuffix: true, kor: "벤치", emoji: "🪑" },
+          { id: "u4_8", word: "beach", blend: "ch", rest: "bea", isSuffix: true, kor: "해변", emoji: "🏖️" },
+          { id: "u4_9", word: "thin", blend: "th", rest: "in", kor: "얇은/마른", emoji: "🧍" }
         ]
       }
     ];
+
+    const PHONICS_SOUND_MAP = {
+      "bl": "블르", "cl": "클르", "fl": "플르", "gl": "글르", "pl": "플르", "sl": "슬르",
+      "br": "브르", "cr": "크르", "fr": "프르", "dr": "드르", "gr": "그르", "tr": "트르",
+      "sk": "스크", "sm": "스므", "sn": "스느", "st": "스트", "sw": "스워", "sp": "스프",
+      "sh": "쉬",   "ch": "치",   "wh": "워",   "th": "쓰",   "ph": "프",   "ck": "크", "ng": "응"
+    };
 
     let cachedEnVoice = null;
     let cachedKorVoice = null;
@@ -192,52 +177,91 @@
       };
     }
 
-    const speakText = (text, rate = 0.85) => {
-      if (!('speechSynthesis' in window)) return;
-      window.speechSynthesis.cancel();
+    const speechQueue = [];
+    let isSpeaking = false;
 
-      const lowerText = text.toLowerCase().trim();
+    const processQueue = () => {
+      if (isSpeaking || speechQueue.length === 0) return;
+      if (!('speechSynthesis' in window)) return;
+
+      const item = speechQueue.shift();
+      isSpeaking = true;
+
+      const lowerText = item.text.toLowerCase().trim();
       const phoneticSound = PHONICS_SOUND_MAP[lowerText];
 
       const utterance = new SpeechSynthesisUtterance();
 
-      if (phoneticSound) {
-        // 단독 파닉스 조각(bl, cl 등)은 한글 음가로 "블르", "클르"로 명확히 읽음
+      if (phoneticSound && item.useKoreanPhonics !== false) {
         utterance.text = phoneticSound;
         utterance.lang = 'ko-KR';
         const korVoice = getVoice('ko');
         if (korVoice) utterance.voice = korVoice;
-        utterance.rate = 0.9;
+        utterance.rate = 0.8;
         utterance.pitch = 1.1;
       } else {
-        // 전체 단어 및 기타 문자는 영문 음성으로 읽음
-        utterance.text = text;
+        utterance.text = item.text;
         utterance.lang = 'en-US';
         const enVoice = getVoice('en');
         if (enVoice) utterance.voice = enVoice;
-        utterance.rate = rate;
-        utterance.pitch = 1.15;
+        utterance.rate = item.rate || 0.85;
+        utterance.pitch = 1.0;
       }
 
+      utterance.onend = () => {
+        isSpeaking = false;
+        setTimeout(processQueue, 150);
+      };
+
+      utterance.onerror = () => {
+        isSpeaking = false;
+        setTimeout(processQueue, 100);
+      };
+
+      window.speechSynthesis.cancel();
       window.speechSynthesis.speak(utterance);
+    };
+
+    const speakText = (text, rate = 0.85) => {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      speechQueue.length = 0;
+      isSpeaking = false;
+      speechQueue.push({ text, rate });
+      processQueue();
+    };
+
+    const speakSequence = (items) => {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      speechQueue.length = 0;
+      isSpeaking = false;
+      items.forEach(item => {
+        if (typeof item === 'string') {
+          speechQueue.push({ text: item, rate: 0.85 });
+        } else {
+          speechQueue.push(item);
+        }
+      });
+      processQueue();
     };
 
     const triggerConfetti = () => {
       if (window.confetti) {
-        window.confetti({ particleCount: 45, spread: 55, origin: { y: 0.7 } });
+        window.confetti({ particleCount: 40, spread: 60, origin: { y: 0.7 } });
       }
     };
 
     function App() {
-      const [studentName, setStudentName] = useState(() => localStorage.getItem("pk_student_name") || "");
-      const [grade, setGrade] = useState(() => localStorage.getItem("pk_grade") || "유치부");
-      const [isLoggedIn, setIsLoggedIn] = useState(() => !!localStorage.getItem("pk_student_name"));
+      const [studentName, setStudentName] = React.useState(() => localStorage.getItem("pk_student_name") || "");
+      const [grade, setGrade] = React.useState(() => localStorage.getItem("pk_grade") || "유치부");
+      const [isLoggedIn, setIsLoggedIn] = React.useState(() => !!localStorage.getItem("pk_student_name"));
 
-      const [activeUnitId, setActiveUnitId] = useState(1);
-      const [activeMode, setActiveMode] = useState('listen'); // listen, blend, match, spelling, missing
-      const [totalScore, setTotalScore] = useState(0);
+      const [activeUnitId, setActiveUnitId] = React.useState(1);
+      const [activeMode, setActiveMode] = React.useState('listen');
+      const [totalScore, setTotalScore] = React.useState(0);
 
-      const currentUnit = UNITS_DATA.find(u => u.id === activeUnitId);
+      const currentUnit = UNITS_DATA.find(u => u.id === activeUnitId) || UNITS_DATA[0];
 
       const handleLoginSubmit = (e) => {
         e.preventDefault();
@@ -300,7 +324,7 @@
 
       return (
         <div className="max-w-md mx-auto px-3 pt-3">
-          {/* Header Profile Bar */}
+          {/* Header Bar */}
           <header className="bg-white rounded-2xl p-3 mb-3 border-2 border-pink-200 flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center text-xl">👧</div>
@@ -324,7 +348,7 @@
             </div>
           </header>
 
-          {/* Unit Selector Tabs */}
+          {/* Unit Navigation Tabs */}
           <div className="grid grid-cols-4 gap-1.5 mb-3">
             {UNITS_DATA.map(u => {
               const isActive = u.id === activeUnitId;
@@ -345,7 +369,7 @@
             })}
           </div>
 
-          {/* Activity Mode Icons Bar */}
+          {/* Activity Navigation Bar */}
           <div className="grid grid-cols-5 gap-1 mb-3 bg-white p-1.5 rounded-2xl border-2 border-pink-100 shadow-xs">
             <ModeTab id="listen" label="듣기" icon="🎧" active={activeMode} setMode={setActiveMode} />
             <ModeTab id="blend" label="조합" icon="🧩" active={activeMode} setMode={setActiveMode} />
@@ -354,8 +378,8 @@
             <ModeTab id="missing" label="빈칸" icon="🔍" active={activeMode} setMode={setActiveMode} />
           </div>
 
-          {/* Active Activity Frame */}
-          <main className="bg-white rounded-3xl p-4 border-2 border-pink-200 bubbly-card min-h-[400px]">
+          {/* Activity Area Container */}
+          <main className="bg-white rounded-3xl p-4 border-2 border-pink-200 bubbly-card min-h-[420px]">
             {activeMode === 'listen' && <ListenRepeatMode unit={currentUnit} />}
             {activeMode === 'blend' && <BlendMode unit={currentUnit} onScore={handleScoreGain} />}
             {activeMode === 'match' && <CardMatchMode unit={currentUnit} onScore={handleScoreGain} />}
@@ -384,9 +408,9 @@
     }
 
     function ListenRepeatMode({ unit }) {
-      const [selectedWord, setSelectedWord] = useState(unit.words[0]);
+      const [selectedWord, setSelectedWord] = React.useState(unit.words[0]);
 
-      useEffect(() => {
+      React.useEffect(() => {
         setSelectedWord(unit.words[0]);
       }, [unit]);
 
@@ -435,30 +459,43 @@
     }
 
     function BlendMode({ unit, onScore }) {
-      const [selectedTarget, setSelectedTarget] = useState(unit.targets[0]);
+      const [selectedTarget, setSelectedTarget] = React.useState('ALL');
 
-      const filteredWords = unit.words.filter(w => w.blend === selectedTarget);
+      React.useEffect(() => {
+        setSelectedTarget('ALL');
+      }, [unit]);
+
+      const filteredWords = selectedTarget === 'ALL'
+        ? unit.words
+        : unit.words.filter(w => w.blend === selectedTarget);
 
       const handleCombine = (w) => {
-        // 1단계: 이중자음 파닉스 소리 ("블르" 등)
-        speakText(w.blend);
-        // 2단계: 나머지 문자열 소리
-        setTimeout(() => speakText(w.rest), 700);
-        // 3단계: 전체 단어 합성음
-        setTimeout(() => {
-          speakText(w.word);
-          triggerConfetti();
-          onScore(5);
-        }, 1400);
+        speakSequence([
+          { text: w.blend, rate: 0.8 },
+          { text: w.word, rate: 0.85, useKoreanPhonics: false }
+        ]);
+        triggerConfetti();
+        onScore(5);
       };
 
       return (
         <div>
-          <div className="text-xs font-bold text-center text-purple-500 mb-3">
-            알맞은 소리 조각을 누르고 결합해보세요!
+          <div className="text-xs font-bold text-center text-purple-600 mb-2">
+            소리 조각을 누르고 단어를 만들어보세요! (총 {filteredWords.length}개)
           </div>
 
-          <div className="flex flex-wrap gap-1.5 justify-center mb-4">
+          {/* Filter Target Tabs */}
+          <div className="flex flex-wrap gap-1 justify-center mb-3">
+            <button
+              onClick={() => setSelectedTarget('ALL')}
+              className={`px-2.5 py-1 rounded-xl font-black text-xs border-2 ${
+                selectedTarget === 'ALL'
+                  ? 'bg-purple-600 border-purple-700 text-white'
+                  : 'bg-white border-purple-200 text-purple-600'
+              }`}
+            >
+              전체 보기 ({unit.words.length}) ⭐
+            </button>
             {unit.targets.map(t => (
               <button
                 key={t}
@@ -466,35 +503,44 @@
                   setSelectedTarget(t);
                   speakText(t);
                 }}
-                className={`px-3 py-1.5 rounded-xl font-black text-xs border-2 ${
+                className={`px-2.5 py-1 rounded-xl font-black text-xs border-2 ${
                   selectedTarget === t
                     ? 'bg-purple-500 border-purple-600 text-white'
                     : 'bg-white border-purple-200 text-purple-600'
                 }`}
               >
-                /{t}/ ({PHONICS_SOUND_MAP[t] || t})
+                /{t}/
               </button>
             ))}
           </div>
 
-          <div className="space-y-2">
+          {/* Word List (Scrollable - Ensures ALL words are accessible) */}
+          <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1 pb-4">
             {filteredWords.map(w => (
               <div
                 key={w.id}
                 onClick={() => handleCombine(w)}
-                className="bg-purple-50 border-2 border-purple-200 p-3 rounded-2xl flex items-center justify-between cursor-pointer bubbly-btn"
+                className="bg-purple-50 border-2 border-purple-200 p-2.5 rounded-2xl flex items-center justify-between cursor-pointer bubbly-btn hover:bg-purple-100 transition-all"
               >
                 <div className="flex items-center gap-2">
                   <span className="text-2xl">{w.emoji}</span>
-                  <span className="font-black text-base text-slate-700">
-                    {w.isSuffix
-                      ? `${w.rest} + ${w.blend} (${PHONICS_SOUND_MAP[w.blend]})`
-                      : `${w.blend} (${PHONICS_SOUND_MAP[w.blend]}) + ${w.rest}`}
+                  <div>
+                    <div className="font-black text-base text-slate-800">
+                      {w.isSuffix
+                        ? `${w.rest} + ${w.blend}`
+                        : `${w.blend} + ${w.rest}`}
+                    </div>
+                    <div className="text-[11px] font-bold text-slate-400">{w.kor}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black text-purple-700 bg-purple-200/80 px-2.5 py-1 rounded-lg">
+                    {w.word}
+                  </span>
+                  <span className="bg-yellow-400 text-yellow-950 font-extrabold px-2.5 py-1 rounded-xl text-xs shadow-xs">
+                    합치기 ⚡
                   </span>
                 </div>
-                <span className="bg-yellow-300 text-yellow-900 font-extrabold px-2.5 py-1 rounded-xl text-xs">
-                  합치기 ⚡
-                </span>
               </div>
             ))}
           </div>
@@ -503,10 +549,10 @@
     }
 
     function CardMatchMode({ unit, onScore }) {
-      const [cards, setCards] = useState([]);
-      const [flippedCards, setFlippedCards] = useState([]);
-      const [matchedCardIds, setMatchedCardIds] = useState([]);
-      const [isProcessing, setIsProcessing] = useState(false);
+      const [cards, setCards] = React.useState([]);
+      const [flippedCards, setFlippedCards] = React.useState([]);
+      const [matchedCardIds, setMatchedCardIds] = React.useState([]);
+      const [isProcessing, setIsProcessing] = React.useState(false);
 
       const startNewGame = () => {
         const shuffledWords = [...unit.words].sort(() => 0.5 - Math.random()).slice(0, 4);
@@ -523,7 +569,7 @@
         setIsProcessing(false);
       };
 
-      useEffect(() => { startNewGame(); }, [unit]);
+      React.useEffect(() => { startNewGame(); }, [unit]);
 
       const handleCardClick = (card) => {
         if (isProcessing) return;
@@ -594,8 +640,8 @@
                     {isFlipped ? (
                       <>
                         <div className="text-xl">{card.type === 'word' ? card.emoji : '🔤'}</div>
-                        <div className="text-[11px] font-black mt-0.5">
-                          {card.type === 'blend' ? `${card.content} (${PHONICS_SOUND_MAP[card.content] || ''})` : card.content}
+                        <div className="text-xs font-black mt-0.5">
+                          {card.content}
                         </div>
                       </>
                     ) : (
@@ -611,14 +657,14 @@
     }
 
     function SpellingQuizMode({ unit, onScore }) {
-      const [currentIndex, setCurrentIndex] = useState(0);
-      const [userInput, setUserInput] = useState([]);
-      const [scrambled, setScrambled] = useState([]);
-      const [isCorrect, setIsCorrect] = useState(false);
+      const [currentIndex, setCurrentIndex] = React.useState(0);
+      const [userInput, setUserInput] = React.useState([]);
+      const [scrambled, setScrambled] = React.useState([]);
+      const [isCorrect, setIsCorrect] = React.useState(false);
 
       const currentWordObj = unit.words[currentIndex];
 
-      useEffect(() => {
+      React.useEffect(() => {
         if (!currentWordObj) return;
         setUserInput([]);
         setIsCorrect(false);
@@ -705,13 +751,13 @@
     }
 
     function MissingLetterMode({ unit, onScore }) {
-      const [currentIndex, setCurrentIndex] = useState(0);
-      const [options, setOptions] = useState([]);
-      const [isCorrect, setIsCorrect] = useState(false);
+      const [currentIndex, setCurrentIndex] = React.useState(0);
+      const [options, setOptions] = React.useState([]);
+      const [isCorrect, setIsCorrect] = React.useState(false);
 
       const currentWordObj = unit.words[currentIndex];
 
-      useEffect(() => {
+      React.useEffect(() => {
         if (!currentWordObj) return;
         setIsCorrect(false);
         const correct = currentWordObj.blend;
@@ -724,8 +770,10 @@
         if (isCorrect) return;
         if (opt === currentWordObj.blend) {
           setIsCorrect(true);
-          speakText(opt); // "블르", "클르" 발음 실행
-          setTimeout(() => speakText(currentWordObj.word), 700);
+          speakSequence([
+            { text: opt, rate: 0.8 },
+            { text: currentWordObj.word, rate: 0.85, useKoreanPhonics: false }
+          ]);
           triggerConfetti();
           onScore(10);
         } else {
@@ -735,7 +783,7 @@
 
       return (
         <div className="text-center">
-          <div className="text-xs font-bold text-sky-600 mb-2">빈칸에 들어갈 파닉스를 맞춰보세요</div>
+          <div className="text-xs font-bold text-sky-600 mb-2">빈칸에 들어갈 알맞은 알파벳을 고르세요</div>
           <div className="text-5xl mb-1">{currentWordObj.emoji}</div>
           <div className="text-xs font-bold text-slate-400 mb-3">"{currentWordObj.kor}"</div>
 
@@ -761,18 +809,19 @@
             )}
           </div>
 
+          {/* Option Buttons: Only English Display without Korean Brackets */}
           <div className="grid grid-cols-2 gap-2 mb-4">
             {options.map((opt, i) => (
               <button
                 key={i}
                 onClick={() => handleSelect(opt)}
-                className={`py-2.5 rounded-xl font-black text-base border-2 bubbly-btn ${
+                className={`py-3.5 rounded-2xl font-black text-2xl border-2 bubbly-btn transition-all ${
                   isCorrect && opt === currentWordObj.blend
                     ? 'bg-emerald-400 border-emerald-500 text-white'
-                    : 'bg-white border-sky-200 text-sky-600'
+                    : 'bg-white border-sky-200 text-sky-600 hover:bg-sky-50'
                 }`}
               >
-                {opt} <span className="text-xs font-normal">({PHONICS_SOUND_MAP[opt] || opt})</span>
+                {opt}
               </button>
             ))}
           </div>
