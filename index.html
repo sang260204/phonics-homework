@@ -28,7 +28,7 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useRef } = React;
 
     const UNITS = [
       {
@@ -120,15 +120,31 @@
       const [flipped, setFlipped] = useState([]);
       const [matched, setMatched] = useState([]);
 
+      const audioRef = useRef(null);
       const activeUnitObj = UNITS[currentUnit];
 
-      // 모바일 소리 제한 해제 함수
-      const unlockAudio = () => {
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.resume();
-          const dummy = new SpeechSynthesisUtterance('');
-          dummy.volume = 0;
-          window.speechSynthesis.speak(dummy);
+      // 모바일 연동 내장 오디오 오디오 재생 함수 (웹 API 백엔드 소리)
+      const playTTS = (text) => {
+        try {
+          const encodedText = encodeURIComponent(text);
+          const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=en&client=tw-ob`;
+          
+          if (!audioRef.current) {
+            audioRef.current = new Audio();
+          }
+          
+          audioRef.current.src = audioUrl;
+          audioRef.current.play().catch(() => {
+            // 보조(Fallback): 브라우저 내장 TTS 실행
+            if ('speechSynthesis' in window) {
+              window.speechSynthesis.cancel();
+              const utterance = new SpeechSynthesisUtterance(text);
+              utterance.lang = 'en-US';
+              window.speechSynthesis.speak(utterance);
+            }
+          });
+        } catch (e) {
+          console.error(e);
         }
       };
 
@@ -157,33 +173,6 @@
           }
         }
       }, [currentUnit, currentMode]);
-
-      // 모바일 호환 TTS 재생 함수
-      const playTTS = (text) => {
-        if (!('speechSynthesis' in window)) {
-          alert('이 브라우저는 음성 재생을 지원하지 않습니다.');
-          return;
-        }
-
-        window.speechSynthesis.cancel(); // 진행 중인 음성 취소
-
-        setTimeout(() => {
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.lang = 'en-US';
-          utterance.rate = 0.8;
-          utterance.volume = 1.0;
-
-          // 모바일 호환용 영어 목소리 지정
-          const voices = window.speechSynthesis.getVoices();
-          const enVoice = voices.find(v => v.lang.startsWith('en'));
-          if (enVoice) {
-            utterance.voice = enVoice;
-          }
-
-          window.speechSynthesis.resume();
-          window.speechSynthesis.speak(utterance);
-        }, 50);
-      };
 
       const sendResultToGoogleSheet = (unitTitle, modeTitle, addScore) => {
         if (!GOOGLE_SCRIPT_URL) return;
@@ -222,7 +211,6 @@
       };
 
       const handleCardClick = (index) => {
-        unlockAudio();
         if (flipped.length === 2 || flipped.includes(index) || matched.includes(index)) return;
 
         const newFlipped = [...flipped, index];
@@ -256,7 +244,6 @@
             <form onSubmit={(e) => { 
               e.preventDefault(); 
               if(studentName.trim()) {
-                unlockAudio();
                 setIsRegistered(true); 
               }
             }} className="space-y-4">
@@ -266,7 +253,7 @@
                   type="text"
                   value={studentName}
                   onChange={(e) => setStudentName(e.target.value)}
-                  placeholder="예: 이상식"
+                  placeholder="예: 홍길동"
                   className="w-full px-4 py-3 border-2 border-pink-200 rounded-2xl focus:outline-none focus:border-pink-400 text-lg font-bold"
                 />
               </div>
@@ -315,7 +302,7 @@
             {UNITS.map((u, idx) => (
               <button
                 key={u.id}
-                onClick={() => { unlockAudio(); setCurrentUnit(idx); }}
+                onClick={() => setCurrentUnit(idx)}
                 className={`p-2 rounded-2xl border-b-4 font-black transition flex flex-col items-center justify-center ${
                   currentUnit === idx ? 'bg-pink-500 text-white border-pink-700 shadow-lg scale-105' : 'bg-white text-gray-600 border-gray-200 hover:bg-pink-50'
                 }`}
@@ -336,7 +323,7 @@
             ].map((m) => (
               <button
                 key={m.id}
-                onClick={() => { unlockAudio(); setCurrentMode(m.id); }}
+                onClick={() => setCurrentMode(m.id)}
                 className={`py-2 rounded-xl transition flex flex-col items-center justify-center ${
                   currentMode === m.id ? 'bg-pink-400 text-white shadow-md' : 'text-gray-500 hover:bg-pink-50'
                 }`}
@@ -360,7 +347,7 @@
                       {selectedWord.word.slice(selectedWord.sound.length)}
                     </div>
                     <p className="text-sm font-bold text-gray-500 mb-2">"{selectedWord.meaning}"</p>
-                    <button onClick={() => { unlockAudio(); playTTS(selectedWord.word); }} className="bg-pink-400 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow active:scale-95">
+                    <button onClick={() => playTTS(selectedWord.word)} className="bg-pink-400 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow active:scale-95">
                       🔊 크게 듣기
                     </button>
                   </div>
@@ -369,7 +356,7 @@
                   {activeUnitObj.words.map((w, idx) => (
                     <button
                       key={idx}
-                      onClick={() => { unlockAudio(); setSelectedWord(w); playTTS(w.word); }}
+                      onClick={() => { setSelectedWord(w); playTTS(w.word); }}
                       className={`p-2 rounded-xl border-2 text-center transition ${selectedWord?.word === w.word ? 'border-amber-400 bg-amber-100 shadow-md' : 'border-gray-100 bg-gray-50 hover:bg-pink-50'}`}
                     >
                       <div className="text-2xl mb-1">{w.icon}</div>
@@ -394,7 +381,6 @@
                     <button
                       key={snd}
                       onClick={() => {
-                        unlockAudio();
                         if (snd === currentQuizWord.sound) {
                           setFeedback('⭕ 정답입니다!');
                           playTTS(currentQuizWord.word);
@@ -419,7 +405,7 @@
               <div className="text-center space-y-3">
                 <div className="flex justify-between items-center px-1">
                   <span className="text-xs font-bold text-pink-500">카드를 뒤집어 같은 그림과 단어를 맞추세요!</span>
-                  <button onClick={() => { unlockAudio(); initMatchGame(); }} className="text-xs bg-pink-100 text-pink-600 font-bold px-2 py-1 rounded-lg">🔄 다시하기</button>
+                  <button onClick={initMatchGame} className="text-xs bg-pink-100 text-pink-600 font-bold px-2 py-1 rounded-lg">🔄 다시하기</button>
                 </div>
                 <div className="grid grid-cols-4 gap-2 pt-1">
                   {cards.map((card, idx) => {
@@ -458,7 +444,7 @@
               <div className="text-center space-y-4">
                 <span className="text-xs font-bold text-pink-500">단어를 듣고 올바른 스펠링을 입력하세요!</span>
                 <div className="text-6xl">{currentQuizWord.icon}</div>
-                <button onClick={() => { unlockAudio(); playTTS(currentQuizWord.word); }} className="bg-amber-400 text-white font-black px-4 py-1.5 rounded-full text-xs shadow">
+                <button onClick={() => playTTS(currentQuizWord.word)} className="bg-amber-400 text-white font-black px-4 py-1.5 rounded-full text-xs shadow">
                   🔊 소리 다시 듣기
                 </button>
                 <div>
@@ -472,7 +458,6 @@
                 </div>
                 <button
                   onClick={() => {
-                    unlockAudio();
                     if (userAnswer.trim() === currentQuizWord.word) {
                       setFeedback('🎉 정답입니다!');
                       addScorePoints(10, '스펠링 게임');
@@ -503,7 +488,6 @@
                     <button
                       key={char}
                       onClick={() => {
-                        unlockAudio();
                         if (char === currentQuizWord.word[1]) {
                           setFeedback('⭕ 정답!');
                           playTTS(currentQuizWord.word);
