@@ -28,7 +28,7 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useRef } = React;
+    const { useState, useEffect } = React;
 
     const UNITS = [
       {
@@ -115,36 +115,38 @@
       const [userAnswer, setUserAnswer] = useState('');
       const [feedback, setFeedback] = useState('');
 
-      // Card Match Game States (8 Cards)
+      // Card Match Game States
       const [cards, setCards] = useState([]);
       const [flipped, setFlipped] = useState([]);
       const [matched, setMatched] = useState([]);
 
-      const audioRef = useRef(null);
       const activeUnitObj = UNITS[currentUnit];
 
-      // 모바일 연동 내장 오디오 오디오 재생 함수 (웹 API 백엔드 소리)
-      const playTTS = (text) => {
-        try {
-          const encodedText = encodeURIComponent(text);
-          const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=en&client=tw-ob`;
-          
-          if (!audioRef.current) {
-            audioRef.current = new Audio();
-          }
-          
-          audioRef.current.src = audioUrl;
-          audioRef.current.play().catch(() => {
-            // 보조(Fallback): 브라우저 내장 TTS 실행
-            if ('speechSynthesis' in window) {
-              window.speechSynthesis.cancel();
-              const utterance = new SpeechSynthesisUtterance(text);
-              utterance.lang = 'en-US';
-              window.speechSynthesis.speak(utterance);
-            }
-          });
-        } catch (e) {
-          console.error(e);
+      // 모바일 웹 호환 완벽 음성 출력 로직
+      const playSound = (text) => {
+        if (!('speechSynthesis' in window)) return;
+        
+        window.speechSynthesis.cancel(); // 이전 소리 중단
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.85; // 아이들이 잘 들을 수 있게 약간 천천히
+        utterance.pitch = 1.0;
+
+        // 아이폰/안드로이드 음성 목록에서 미국 영어 선택 지원
+        const voices = window.speechSynthesis.getVoices();
+        const enVoice = voices.find(v => v.lang.includes('en-US') || v.lang.includes('en'));
+        if (enVoice) {
+          utterance.voice = enVoice;
+        }
+
+        window.speechSynthesis.speak(utterance);
+      };
+
+      // 모바일 최초 터치시 음성 엔진 활성화
+      const handleUserInteraction = () => {
+        if ('speechSynthesis' in window && window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
         }
       };
 
@@ -161,6 +163,12 @@
         setFlipped([]);
         setMatched([]);
       };
+
+      useEffect(() => {
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.getVoices();
+        }
+      }, []);
 
       useEffect(() => {
         if (activeUnitObj) {
@@ -211,11 +219,12 @@
       };
 
       const handleCardClick = (index) => {
+        handleUserInteraction();
         if (flipped.length === 2 || flipped.includes(index) || matched.includes(index)) return;
 
         const newFlipped = [...flipped, index];
         setFlipped(newFlipped);
-        playTTS(cards[index].word);
+        playSound(cards[index].word);
 
         if (newFlipped.length === 2) {
           const card1 = cards[newFlipped[0]];
@@ -238,13 +247,14 @@
 
       if (!isRegistered) {
         return (
-          <div className="max-w-md mx-auto mt-12 p-6 bg-white rounded-3xl shadow-xl border-4 border-pink-200 text-center">
+          <div className="max-w-md mx-auto mt-12 p-6 bg-white rounded-3xl shadow-xl border-4 border-pink-200 text-center" onClick={handleUserInteraction}>
             <h1 className="text-3xl font-black text-pink-500 mb-2">🎈 파닉스 플레이랜드</h1>
             <p className="text-gray-500 text-sm mb-6">학습을 시작할 학생 정보를 입력해주세요!</p>
             <form onSubmit={(e) => { 
               e.preventDefault(); 
               if(studentName.trim()) {
                 setIsRegistered(true); 
+                playSound('Welcome to Phonics Playland!');
               }
             }} className="space-y-4">
               <div className="text-left">
@@ -279,7 +289,7 @@
       }
 
       return (
-        <div className="max-w-md mx-auto p-4 space-y-4">
+        <div className="max-w-md mx-auto p-4 space-y-4" onClick={handleUserInteraction}>
           <div className="bg-white rounded-2xl p-3 shadow-md border-2 border-pink-100 flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <span className="text-2xl">👧</span>
@@ -302,7 +312,7 @@
             {UNITS.map((u, idx) => (
               <button
                 key={u.id}
-                onClick={() => setCurrentUnit(idx)}
+                onClick={() => { setCurrentUnit(idx); playSound(u.title); }}
                 className={`p-2 rounded-2xl border-b-4 font-black transition flex flex-col items-center justify-center ${
                   currentUnit === idx ? 'bg-pink-500 text-white border-pink-700 shadow-lg scale-105' : 'bg-white text-gray-600 border-gray-200 hover:bg-pink-50'
                 }`}
@@ -347,7 +357,7 @@
                       {selectedWord.word.slice(selectedWord.sound.length)}
                     </div>
                     <p className="text-sm font-bold text-gray-500 mb-2">"{selectedWord.meaning}"</p>
-                    <button onClick={() => playTTS(selectedWord.word)} className="bg-pink-400 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow active:scale-95">
+                    <button onClick={() => playSound(selectedWord.word)} className="bg-pink-400 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow active:scale-95">
                       🔊 크게 듣기
                     </button>
                   </div>
@@ -356,7 +366,7 @@
                   {activeUnitObj.words.map((w, idx) => (
                     <button
                       key={idx}
-                      onClick={() => { setSelectedWord(w); playTTS(w.word); }}
+                      onClick={() => { setSelectedWord(w); playSound(w.word); }}
                       className={`p-2 rounded-xl border-2 text-center transition ${selectedWord?.word === w.word ? 'border-amber-400 bg-amber-100 shadow-md' : 'border-gray-100 bg-gray-50 hover:bg-pink-50'}`}
                     >
                       <div className="text-2xl mb-1">{w.icon}</div>
@@ -383,7 +393,7 @@
                       onClick={() => {
                         if (snd === currentQuizWord.sound) {
                           setFeedback('⭕ 정답입니다!');
-                          playTTS(currentQuizWord.word);
+                          playSound(currentQuizWord.word);
                           addScorePoints(10, '조합 게임');
                           setTimeout(handleNextQuiz, 1200);
                         } else {
@@ -416,7 +426,7 @@
                         onClick={() => handleCardClick(idx)}
                         className={`h-24 rounded-2xl border-2 flex flex-col items-center justify-center font-black transition-all transform active:scale-95 ${
                           isFlipped
-                            ? 'bg-amber-50 border-amber-300 text-gray-800 shadow-md rotate-0'
+                            ? 'bg-amber-50 border-amber-300 text-gray-800 shadow-md'
                             : 'bg-pink-400 border-pink-500 text-white text-3xl shadow'
                         }`}
                       >
@@ -444,7 +454,7 @@
               <div className="text-center space-y-4">
                 <span className="text-xs font-bold text-pink-500">단어를 듣고 올바른 스펠링을 입력하세요!</span>
                 <div className="text-6xl">{currentQuizWord.icon}</div>
-                <button onClick={() => playTTS(currentQuizWord.word)} className="bg-amber-400 text-white font-black px-4 py-1.5 rounded-full text-xs shadow">
+                <button onClick={() => playSound(currentQuizWord.word)} className="bg-amber-400 text-white font-black px-4 py-1.5 rounded-full text-xs shadow">
                   🔊 소리 다시 듣기
                 </button>
                 <div>
@@ -490,7 +500,7 @@
                       onClick={() => {
                         if (char === currentQuizWord.word[1]) {
                           setFeedback('⭕ 정답!');
-                          playTTS(currentQuizWord.word);
+                          playSound(currentQuizWord.word);
                           addScorePoints(10, '빈칸 게임');
                           setTimeout(handleNextQuiz, 1200);
                         } else {
